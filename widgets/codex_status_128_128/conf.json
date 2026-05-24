@@ -1,0 +1,11 @@
+{
+  "id": "codex_status_128_128",
+  "type": "widget",
+  "name": "Codex Status",
+  "author": "Joe Feocco",
+  "version": "1.0.0",
+  "description": "A simple PixelBoard status widget uploaded over the Dartsnut WebSocket API.",
+  "size": [128, 128],
+  "fields": [],
+  "preview": []
+}
