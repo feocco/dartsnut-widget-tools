@@ -8,6 +8,13 @@ This repo currently contains:
 - `scripts/upload_widget.py` - uploads a widget to a board over the Dartsnut WebSocket API.
 - `docs/dartsnut-websocket-upload.md` - short notes on the upload flow and emulator setup.
 
+Clone it on another machine:
+
+```bash
+git clone https://github.com/feocco/dartsnut-widget-tools.git
+cd dartsnut-widget-tools
+```
+
 ## Upload To PixelBoard
 
 Default target is the PixelBoard we verified on the LAN:
