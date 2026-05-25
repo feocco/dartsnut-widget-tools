@@ -15,7 +15,6 @@ Clone it on another machine:
 ```bash
 git clone https://github.com/feocco/dartsnut-widget-tools.git
 cd dartsnut-widget-tools
-git checkout codex/pixeldarts-chess-v2
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
@@ -75,6 +74,18 @@ PixelDarts Chess currently runs as a two-player PixelDart game:
 - The board rotates for the active shooter during normal play.
 - After a move hits, the piece animates, the landed board holds briefly, then
   the board rotates to the next player.
+
+### PixelDarts Chess Preview
+
+These frames are generated from the current game renderer.
+
+![PixelDarts Chess title screen](docs/images/pixeldarts_chess/title.png)
+
+![White shoots cutscene](docs/images/pixeldarts_chess/white-shoots-cutscene.png)
+
+![Opening choices screen](docs/images/pixeldarts_chess/opening-choices.png)
+
+![Opening complete board recap](docs/images/pixeldarts_chess/opening-complete-board.png)
 
 ## Stockfish Evaluator Image
 
