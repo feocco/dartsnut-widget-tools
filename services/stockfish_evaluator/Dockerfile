@@ -1,5 +1,7 @@
 FROM python:3.14-slim
 
+LABEL org.opencontainers.image.source="https://github.com/feocco/dartsnut-widget-tools"
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends stockfish \
     && rm -rf /var/lib/apt/lists/*
