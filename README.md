@@ -96,6 +96,28 @@ docker build -t ghcr.io/feocco/dartsnut-widgets-stockfish-evaluator:latest servi
 docker run --rm -p 127.0.0.1:8096:8096 ghcr.io/feocco/dartsnut-widgets-stockfish-evaluator:latest
 ```
 
+The game sends the current board state to `POST /rank` as a FEN string:
+
+```bash
+curl -s http://127.0.0.1:8096/rank \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "depth": 8,
+    "movetime_ms": 80
+  }'
+```
+
+The response includes ranked legal moves with `uci`, `san`, `score_cp`, `mate`,
+and `rank`. `root_score_cp` and `white_expectation` describe the submitted
+position from White's perspective and are used for the board win-probability
+bar.
+
+The default `depth=8` is an arcade-speed analysis setting, not an Elo setting.
+It is intended to distinguish good moves from obvious mistakes quickly for
+casual play. See [services/stockfish_evaluator/README.md](services/stockfish_evaluator/README.md)
+for the full API contract and tuning notes.
+
 The image is published by `.github/workflows/stockfish-evaluator-image.yml`.
 Runtime Compose config belongs in `feocco/homelab-config`, not in this app
 source tree.
