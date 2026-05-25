@@ -11,30 +11,30 @@ PLAYER_COLORS = {
     "black": "red",
 }
 
+GREAT_MAX_LOSS_CP = 100
+OKAY_MAX_LOSS_CP = 300
+BLUNDER_MIN_LOSS_CP = 300
+
 TARGET_DEFS = {
     "best": {
         "title": "BEST",
         "icon": "*",
         "color": QUALITY_COLORS["best"],
-        "rank_index": 0,
     },
     "great": {
         "title": "GREAT",
         "icon": "!",
         "color": QUALITY_COLORS["great"],
-        "rank_index": 1,
     },
     "okay": {
         "title": "OKAY",
         "icon": "OK",
         "color": QUALITY_COLORS["okay"],
-        "rank_index": "middle",
     },
     "blunder": {
         "title": "BLUNDER",
         "icon": "??",
         "color": QUALITY_COLORS["blunder"],
-        "rank_index": -1,
     },
 }
 
@@ -393,9 +393,10 @@ class PixelDartsChessGame:
             return []
 
         targets = []
+        selected = set()
         for quality, definition in TARGET_DEFS.items():
-            index = self._index_for_quality(definition["rank_index"], len(ranked))
-            scored = ranked[index]
+            scored = self.pick_scored_move_for_quality(quality, ranked, selected)
+            selected.add(scored.move.uci())
             piece = self.board.piece_at(scored.move.from_square)
             symbol = piece.symbol().upper() if piece else "?"
             captured = self.board.piece_at(scored.move.to_square)
@@ -422,12 +423,41 @@ class PixelDartsChessGame:
             )
         return targets
 
-    def _index_for_quality(self, rank_index, count):
-        if rank_index == "middle":
-            return count // 2
-        if rank_index < 0:
-            return max(0, count + rank_index)
-        return min(rank_index, count - 1)
+    def pick_scored_move_for_quality(self, quality, ranked, selected):
+        best_score = ranked[0].score
+        available = [item for item in ranked if item.move.uci() not in selected]
+        if not available:
+            return ranked[0]
+
+        if quality == "best":
+            return ranked[0]
+        if quality == "great":
+            return self.first_by_loss(available, best_score, max_loss=GREAT_MAX_LOSS_CP) or available[0]
+        if quality == "okay":
+            return (
+                self.first_by_loss(available, best_score, min_loss=GREAT_MAX_LOSS_CP + 1, max_loss=OKAY_MAX_LOSS_CP)
+                or self.first_by_loss(available, best_score, min_loss=GREAT_MAX_LOSS_CP + 1)
+                or available[0]
+            )
+        if quality == "blunder":
+            return self.worst_by_loss(available, best_score, min_loss=BLUNDER_MIN_LOSS_CP) or available[-1]
+        return available[0]
+
+    def first_by_loss(self, scored_moves, best_score, min_loss=0, max_loss=None):
+        for scored in scored_moves:
+            loss = best_score - scored.score
+            if loss < min_loss:
+                continue
+            if max_loss is not None and loss > max_loss:
+                continue
+            return scored
+        return None
+
+    def worst_by_loss(self, scored_moves, best_score, min_loss=0):
+        candidates = [scored for scored in scored_moves if best_score - scored.score >= min_loss]
+        if not candidates:
+            return None
+        return candidates[-1]
 
     def label_move(self, move):
         return self.board.san(move)

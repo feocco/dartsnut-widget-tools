@@ -68,8 +68,10 @@ PixelDarts Chess currently runs as a two-player PixelDart game:
 - The app applies the stored opening line and shows an opening-complete recap
   from White's perspective.
 - Normal turns rank legal chess moves with Stockfish when available.
-- The dartboard maps colored wedge clusters to exact ranked moves:
-  blue = best, green = great, yellow = okay, red = blunder.
+- The dartboard maps colored wedge clusters to exact moves from Stockfish:
+  blue = best, green = within roughly 100 centipawns of best, yellow = the
+  strongest playable move roughly 100-300 centipawns worse, red = the worst
+  available move and usually a 300+ centipawn blunder.
 - Each player has three dart attempts. Three misses force the blunder move.
 - The board rotates for the active shooter during normal play.
 - After a move hits, the piece animates, the landed board holds briefly, then

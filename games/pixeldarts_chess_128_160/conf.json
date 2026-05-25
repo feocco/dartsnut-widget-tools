@@ -3,7 +3,7 @@
   "type": "game",
   "name": "PixelDarts Chess",
   "author": "Joe Feocco + Codex",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "A two-player chess darts game where dart targets commit engine-ranked chess moves.",
   "size": [
     128,

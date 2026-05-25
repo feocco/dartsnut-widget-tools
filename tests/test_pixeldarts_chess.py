@@ -160,8 +160,21 @@ class PixelDartsChessGameTests(unittest.TestCase):
         self.assertFalse(game.opening_recap_pending)
         self.assertEqual(game.scene, "thinking")
 
-    def test_ranked_targets_pick_best_great_middle_and_blunder(self):
-        game = self.make_game({"e2e4": 100, "d2d4": 80, "g1f3": 40, "a2a3": -50})
+    def test_ranked_targets_pick_centipawn_loss_buckets(self):
+        legal_scores = {uci: -600 for uci in (
+            "a2a3", "a2a4", "b2b3", "b2b4", "c2c3", "c2c4", "d2d3", "d2d4",
+            "e2e3", "e2e4", "f2f3", "f2f4", "g2g3", "g2g4", "h2h3", "h2h4",
+            "b1a3", "b1c3", "g1f3", "g1h3",
+        )}
+        legal_scores.update({
+            "e2e4": 100,
+            "d2d4": 70,
+            "g1f3": -50,
+            "c2c4": -80,
+            "a2a3": -450,
+            "h2h3": -800,
+        })
+        game = self.make_game(legal_scores)
         game.opening_stage = "complete"
 
         targets = game.prepare_targets()
@@ -169,13 +182,23 @@ class PixelDartsChessGameTests(unittest.TestCase):
 
         self.assertEqual(by_quality["best"].move.uci(), "e2e4")
         self.assertEqual(by_quality["great"].move.uci(), "d2d4")
-        self.assertEqual(by_quality["blunder"].move.uci(), "a2a3")
-        self.assertIn(by_quality["okay"].move.uci(), {target.move.uci() for target in targets})
+        self.assertEqual(by_quality["okay"].move.uci(), "g1f3")
+        self.assertEqual(by_quality["blunder"].move.uci(), "h2h3")
         self.assertEqual(by_quality["best"].asset_key, "wp")
         self.assertEqual(by_quality["best"].from_square, "e2")
         self.assertEqual(by_quality["best"].to_square, "e4")
         self.assertFalse(by_quality["best"].is_capture)
         self.assertEqual(by_quality["best"].legend_label, "BEST")
+
+    def test_ranked_targets_avoid_duplicate_moves_when_buckets_are_sparse(self):
+        game = self.make_game({"e2e4": 100, "d2d4": -50, "g1f3": -500, "a2a3": -800})
+        game.opening_stage = "complete"
+
+        targets = game.prepare_targets()
+
+        self.assertEqual(len({target.move.uci() for target in targets}), len(targets))
+        self.assertEqual(game.target_for_quality("best").move.uci(), "e2e4")
+        self.assertEqual(game.target_for_quality("blunder").move.uci(), "a2a3")
 
     def test_dartboard_classifier_maps_wedge_clusters(self):
         self.assertEqual(dartboard.classify_dartboard_hit(64, 15).quality, "best")
