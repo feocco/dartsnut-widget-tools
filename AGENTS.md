@@ -12,7 +12,8 @@
 - Test helper logic: `python3 -m unittest tests/test_upload_widget.py`.
 - Compile check: `python3 -m py_compile scripts/upload_widget.py widgets/codex_status_128_128/main.py`.
 - Dry-run upload first: `python3 scripts/upload_widget.py --host 192.168.1.194 --dry-run`.
-- Real upload mutates board `apps/conf.json`.
+- Real upload: `python3 scripts/upload_widget.py --host 192.168.1.194`.
+- Real upload mutates board `apps/conf.json`; dry-run first.
 
 ## Runtime Notes
 
