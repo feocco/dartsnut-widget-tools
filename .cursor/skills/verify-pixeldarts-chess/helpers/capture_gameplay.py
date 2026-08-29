@@ -21,7 +21,7 @@ def main():
     )
     from rendering import Renderer
 
-    renderer = Renderer(version="verification")
+    renderer = Renderer(version="0.4.2")
     state = initial_state()
     frames = [renderer.render(state)]
 

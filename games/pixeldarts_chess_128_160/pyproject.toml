@@ -13,6 +13,7 @@ package = false
 
 [tool.dartsnut]
 include = [
+  "assets/*.png",
   "assets.py",
   "chess_game.py",
   "conf.json",

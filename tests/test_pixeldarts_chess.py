@@ -319,7 +319,7 @@ class TypedChessLoopTests(unittest.TestCase):
         def cell_is_light(image, file_index, rank):
             crop = image.crop((file_index * 16 + 4, rank * 16 + 4, file_index * 16 + 12, rank * 16 + 12))
             content = []
-            for pixel in crop.getdata():
+            for pixel in crop.get_flattened_data():
                 near_light = all(abs(pixel[i] - c) <= 25 for i, c in enumerate((176, 180, 168)))
                 near_dark = all(abs(pixel[i] - c) <= 25 for i, c in enumerate((88, 98, 96)))
                 if not near_light and not near_dark:
