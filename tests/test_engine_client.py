@@ -5,11 +5,10 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-
 GAME_DIR = Path(__file__).resolve().parents[1] / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))
 
-from engine_client import FallbackEvaluator, HttpStockfishEvaluator, MoveScore, StaticMaterialEvaluator, chess
+from engine_client import FallbackEvaluator, HttpStockfishEvaluator, MoveScore, chess
 
 
 class RankHandler(BaseHTTPRequestHandler):

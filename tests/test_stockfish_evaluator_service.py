@@ -7,7 +7,6 @@ import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-
 SERVICE_DIR = Path(__file__).resolve().parents[1] / "services" / "stockfish_evaluator"
 sys.path.insert(0, str(SERVICE_DIR))
 
@@ -27,6 +26,7 @@ class FakeRanker:
                 class FakeWdl:
                     def expectation(self):
                         return 0.53
+
                 return FakeWdl()
 
         return [

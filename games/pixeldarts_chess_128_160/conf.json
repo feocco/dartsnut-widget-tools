@@ -14,18 +14,18 @@
       "id": "stockfish_api_url",
       "name": "Stockfish API URL",
       "type": "text",
-      "default": "http://192.168.1.43:8096"
+      "default": ""
     },
     {
       "id": "debug",
       "name": "Debug logging",
-      "type": "switch",
+      "type": "toggle",
       "default": false
     },
     {
       "id": "debug_overlay",
       "name": "Debug overlay",
-      "type": "switch",
+      "type": "toggle",
       "default": false
     }
   ],

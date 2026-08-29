@@ -5,3 +5,5 @@ __pycache__/
 .venv/
 capture/
 .preview/
+dartsnut_emulator/
+*.egg-info/
