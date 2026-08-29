@@ -461,16 +461,25 @@ class InputAdapterTests(unittest.TestCase):
         fake.state = 0x02
         self.assertEqual(adapter.button_events(), ["b"])
 
-    def test_emulator_button_events_take_priority_over_debounced_state(self):
+    def test_emulator_button_events_combine_with_current_state(self):
         class FakeDartsnut:
+            def __init__(self):
+                self.current = False
+
             def get_button_events(self):
-                return {"btn_a": True, "btn_b": False}
+                return {"btn_a": self.current, "btn_b": False}
 
             def get_buttons(self):
-                return {"btn_a": False, "btn_b": False}
+                return {"btn_a": self.current, "btn_b": False}
 
-        adapter = input_adapter.DartsnutInputAdapter(FakeDartsnut())
+        fake = FakeDartsnut()
+        adapter = input_adapter.DartsnutInputAdapter(fake)
 
+        fake.current = True
+        self.assertEqual(adapter.button_events(), ["a"])
+        fake.current = False
+        self.assertEqual(adapter.button_events(), [])
+        fake.current = True
         self.assertEqual(adapter.button_events(), ["a"])
 
 

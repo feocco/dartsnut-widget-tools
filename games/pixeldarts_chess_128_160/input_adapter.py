@@ -13,18 +13,16 @@ class DartsnutInputAdapter:
         self.last_button_snapshot = {}
 
     def button_events(self):
+        events = []
         method = getattr(self.dartsnut, "get_button_events", None)
         if method:
-            events = normalize_buttons(method() or {})
-            if events != self.last_button_snapshot:
-                self.log(f"button-events normalized={events}")
-                self.last_button_snapshot = dict(events)
-            return [name for name in BUTTON_ALIASES if events.get(f"btn_{name}")]
+            event_snapshot = normalize_buttons(method() or {})
+            events.extend(name for name in BUTTON_ALIASES if event_snapshot.get(f"btn_{name}"))
 
         snapshot = self.button_snapshot()
         if snapshot:
-            return self.edge_events(snapshot)
-        return []
+            events.extend(self.edge_events(snapshot))
+        return list(dict.fromkeys(events))
 
     def button_snapshot(self):
         for method_name in ("get_buttons", "get_button_state", "read_buttons"):
