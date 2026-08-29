@@ -297,6 +297,62 @@ class TypedChessLoopTests(unittest.TestCase):
         ready = apply(landed, Tick(6.7))
         self.assertIsInstance(ready.phase, BoardPhase)
 
+    def test_black_perspective_preserves_colors_opening_and_played_move(self):
+        opening = complete_opening()
+        opening_placement = opening.board.fen().split()[0]
+        state = analyze(opening, {"f4h6": 1000})
+        hold = apply(apply(state, DartHit(64, 15, "blue", 5.0)), Tick(5.7))
+        black = apply(hold, Tick(6.7))
+        renderer = Renderer()
+
+        self.assertEqual(hold.board_view_player_name, "White")
+        self.assertEqual(black.board_view_player_name, "Black")
+        self.assertEqual(hold.board.fen(), black.board.fen())
+        self.assertEqual(black.last_move_san, "Bh6")
+        self.assertEqual(black.previous_move_san, opening.last_move_san)
+        self.assertNotEqual(black.board.fen().split()[0], opening_placement)
+        self.assertEqual(black.board.piece_at(chess.H6).symbol(), "B")
+
+        hold_img = renderer.render(hold)
+        black_img = renderer.render(black)
+
+        def cell_is_light(image, file_index, rank):
+            crop = image.crop((file_index * 16 + 4, rank * 16 + 4, file_index * 16 + 12, rank * 16 + 12))
+            content = []
+            for pixel in crop.getdata():
+                near_light = all(abs(pixel[i] - c) <= 25 for i, c in enumerate((176, 180, 168)))
+                near_dark = all(abs(pixel[i] - c) <= 25 for i, c in enumerate((88, 98, 96)))
+                if not near_light and not near_dark:
+                    content.append(pixel)
+            if len(content) < 4:
+                return None
+            average = sum(sum(pixel[:3]) / 3 for pixel in content) / len(content)
+            return average > 115
+
+        for square_id in chess.SQUARES:
+            piece = black.board.piece_at(square_id)
+            if piece is None:
+                continue
+            self.assertEqual(
+                renderer.assets.piece_key(piece),
+                ("piece_b" if piece.color else "piece_w") + piece.symbol().lower(),
+            )
+            for label, image, game in (("hold", hold_img, hold), ("black", black_img, black)):
+                file_index, rank = renderer.board_cell_for_square(square_id, game)
+                measured = cell_is_light(image, file_index, rank)
+                if measured is None:
+                    continue
+                self.assertEqual(measured, bool(piece.color), f"{label} {chess.square_name(square_id)}")
+
+        self.assertGreater(
+            renderer.square_center(chess.A8, game=black)[1],
+            renderer.square_center(chess.A1, game=black)[1],
+        )
+        self.assertGreater(
+            renderer.square_center(chess.A1, game=hold)[1],
+            renderer.square_center(chess.A8, game=hold)[1],
+        )
+
     def test_checkmate_goes_directly_to_game_over(self):
         board = chess.Board("6k1/5Q2/6K1/8/8/8/8/8 w - - 0 1")
         state = analyze(board_ready(board), {"f7g7": 100000})
