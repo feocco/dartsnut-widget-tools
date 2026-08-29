@@ -1,4 +1,3 @@
-from pathlib import Path
 import math
 
 from PIL import Image, ImageDraw, ImageFont
@@ -19,6 +18,20 @@ from dartboard import (
     sector_for_point,
 )
 from engine_client import chess
+from game_state import (
+    BoardPhase,
+    GameOverPhase,
+    MoveAnimationPhase,
+    OpeningFamilyPhase,
+    OpeningRecapPhase,
+    OpeningReplyPhase,
+    PostMoveHoldPhase,
+    TargetPhase,
+    ThinkingPhase,
+    TitlePhase,
+    TurnIntroPhase,
+    phase_name,
+)
 
 
 WIDTH, HEIGHT = 128, 160
@@ -43,8 +56,11 @@ GREEN = (80, 245, 170)
 
 
 class Renderer:
-    def __init__(self):
+    def __init__(self, version=""):
         self.assets = PieceAssets()
+        self.version = version
+        self.debug_overlay_enabled = False
+        self.debug_message = ""
 
     def blank_frame(self):
         return Image.new("RGB", (WIDTH, HEIGHT), BLACK)
@@ -69,23 +85,20 @@ class Renderer:
             img = Image.new("RGB", (WIDTH, HEIGHT), BLACK)
         draw = ImageDraw.Draw(img)
 
-        if game.scene == "title":
+        phase = game.phase
+        if isinstance(phase, TitlePhase):
             self.render_title_scene(img, draw, game)
-        elif game.scene == "board":
+        elif isinstance(phase, (BoardPhase, OpeningRecapPhase, PostMoveHoldPhase)):
             self.render_board_scene(img, draw, game)
-        elif game.scene == "post_move_hold":
-            self.render_board_scene(img, draw, game)
-        elif game.scene == "turn_intro":
+        elif isinstance(phase, TurnIntroPhase):
             self.render_turn_intro_scene(img, draw, game)
-        elif game.scene in ("opening_family", "opening_reply"):
+        elif isinstance(phase, (OpeningFamilyPhase, OpeningReplyPhase)):
             self.render_opening_scene(draw, game)
-        elif game.scene == "targets":
+        elif isinstance(phase, TargetPhase):
             self.render_targets_scene(img, draw, game)
-        elif game.scene == "move_animation":
+        elif isinstance(phase, MoveAnimationPhase):
             self.render_move_animation_scene(img, draw, game)
-        elif game.scene == "result":
-            self.render_result_scene(draw, game)
-        elif game.scene == "thinking":
+        elif isinstance(phase, ThinkingPhase):
             self.render_thinking_scene(draw, game)
         else:
             self.render_game_over_scene(draw, game)
@@ -196,9 +209,13 @@ class Renderer:
         self.center(draw, 49, "CHESS", FONT_BIG, WHITE, BLACK)
         self.center(draw, 74, "engine targets", FONT_SMALL, GREEN, BLACK)
         self.center(draw, 91, "Press A", FONT_MED, GOLD, BLACK)
-        self.center(draw, 107, "v0.4.1", FONT_SMALL, DIM, BLACK)
+        if self.version:
+            self.center(draw, 107, f"v{self.version}", FONT_SMALL, DIM, BLACK)
 
     def render_turn_intro_scene(self, img, draw, game):
+        phase = game.phase
+        if not isinstance(phase, TurnIntroPhase):
+            return
         color = BLUE if game.active_player_name == "White" else RED
         draw.rectangle((0, 0, WIDTH - 1, PLAY_HEIGHT - 1), fill=(8, 10, 18))
         for y in range(0, PLAY_HEIGHT, 16):
@@ -206,8 +223,8 @@ class Renderer:
         draw.rectangle((10, 18, 117, 109), outline=color, fill=(10, 14, 24))
         symbol = "P" if game.active_player_name == "White" else "p"
         self.assets.draw_piece_centered(img, chess.Piece.from_symbol(symbol), 64, 42, 24)
-        self.fit_text(draw, (14, 64, 113, 82), game.cutscene_title.upper(), FONT_MED, color, stroke=BLACK)
-        self.fit_text(draw, (14, 86, 113, 100), game.cutscene_subtitle, FONT_SMALL, WHITE, stroke=BLACK)
+        self.fit_text(draw, (14, 64, 113, 82), phase.title.upper(), FONT_MED, color, stroke=BLACK)
+        self.fit_text(draw, (14, 86, 113, 100), phase.subtitle, FONT_SMALL, WHITE, stroke=BLACK)
         self.center(draw, 108, "A skips", FONT_SMALL, GOLD, BLACK)
 
     def render_board_scene(self, img, draw, game):
@@ -216,16 +233,17 @@ class Renderer:
         self.render_eval_bar(draw, game, 0, 0, 4, PLAY_HEIGHT)
 
     def render_move_animation_scene(self, img, draw, game):
-        animation = game.move_animation
-        if not animation:
+        phase = game.phase
+        if not isinstance(phase, MoveAnimationPhase):
             self.render_board_scene(img, draw, game)
             return
+        animation = phase.animation
         draw.rectangle((0, 0, WIDTH - 1, PLAY_HEIGHT - 1), fill=BLACK)
         hidden = {animation.move.from_square}
         if animation.captured_piece:
             hidden.add(animation.move.to_square)
         self.render_chessboard(img, draw, game, 0, 0, PLAY_HEIGHT, board=animation.board_before, hidden_squares=hidden)
-        progress = animation.progress(getattr(game, "render_time", game.scene_started))
+        progress = animation.progress(game.render_time)
         eased = 1.0 - (1.0 - progress) ** 3
         start_x, start_y = self.square_center(animation.move.from_square, game=game)
         end_x, end_y = self.square_center(animation.move.to_square, game=game)
@@ -249,7 +267,7 @@ class Renderer:
         draw.line((x, y + black_h, x + width - 1, y + black_h), fill=GOLD)
 
     def render_opening_scene(self, draw, game):
-        title = "Pick opening" if game.scene == "opening_family" else "Pick reply"
+        title = "Pick opening" if isinstance(game.phase, OpeningFamilyPhase) else "Pick reply"
         color = BLUE if game.active_player_name == "White" else RED
         draw.rectangle((0, 0, WIDTH - 1, PLAY_HEIGHT - 1), fill=(8, 10, 18))
         self.center(draw, 5, title, FONT_MED, color, BLACK)
@@ -325,14 +343,6 @@ class Renderer:
             y = CENTER[1] + int(60 * math.sin(angle))
             self.fit_text(draw, (x - 6, y - 5, x + 6, y + 5), str(score), FONT_TINY, WHITE, stroke=BLACK)
 
-    def render_result_scene(self, draw, game):
-        self.center(draw, 13, game.last_quality or "MOVE", FONT_BIG, GOLD, BLACK)
-        text = game.result_message or game.last_move_san or ""
-        self.center(draw, 43, text[:18], FONT_MED, WHITE, BLACK)
-        reason = "forced choice" if game.last_reason == "three misses" else "hit confirmed"
-        self.center(draw, 74, reason, FONT_SMALL, DIM, BLACK)
-        self.center(draw, 103, "Press A", FONT_MED, GREEN, BLACK)
-
     def render_thinking_scene(self, draw, game):
         draw.rectangle((0, 0, WIDTH - 1, PLAY_HEIGHT - 1), fill=(8, 10, 18))
         self.center(draw, 38, "THINKING", FONT_BIG, GOLD, BLACK)
@@ -340,9 +350,12 @@ class Renderer:
         self.center(draw, 94, "Stockfish", FONT_SMALL, BLUE, BLACK)
 
     def render_game_over_scene(self, draw, game):
+        phase = game.phase
+        if not isinstance(phase, GameOverPhase):
+            return
         self.center(draw, 16, "GAME OVER", FONT_BIG, RED, BLACK)
-        self.center(draw, 45, game.game_result, FONT_BIG, WHITE, BLACK)
-        self.center(draw, 74, game.game_over_reason, FONT_SMALL, GOLD, BLACK)
+        self.center(draw, 45, phase.result, FONT_BIG, WHITE, BLACK)
+        self.center(draw, 74, phase.reason, FONT_SMALL, GOLD, BLACK)
         if game.last_move_san:
             self.center(draw, 100, f"Last {game.last_move_san}"[:18], FONT_SMALL, DIM, BLACK)
 
@@ -350,20 +363,21 @@ class Renderer:
         draw.rectangle((0, STRIP_TOP, WIDTH - 1, HEIGHT - 1), fill=(6, 8, 12))
         draw.rectangle((0, STRIP_TOP, STRIP_WIDTH - 1, HEIGHT - 1), fill=(6, 8, 12), outline=(56, 64, 76))
         color = BLUE if game.active_player_name == "White" else RED
-        if getattr(game, "debug_overlay_enabled", False):
-            top = self.strip_text(f"{game.scene} {game.debug_message}", 10)
+        phase = game.phase
+        if self.debug_overlay_enabled:
+            top = self.strip_text(f"{phase_name(phase)} {self.debug_message or game.debug_message}", 10)
             bottom = self.strip_text("debug logging on", 10)
-        elif game.scene == "title":
+        elif isinstance(phase, TitlePhase):
             self.render_strip_rows(draw, [("PIXEL", BLUE), ("CHESS", WHITE), ("PRESS A", GOLD), ("B reset", DIM)])
             return
-        elif game.scene == "board":
+        elif isinstance(phase, (BoardPhase, OpeningRecapPhase)):
             self.render_strip_rows(draw, self.board_status_rows(game))
             return
-        elif game.scene == "turn_intro":
-            self.render_strip_rows(draw, [(game.active_player_name.upper(), color), ("SHOOTS", GOLD), (self.strip_text(game.cutscene_subtitle.upper(), 10), WHITE), ("A SKIP", GREEN)])
+        elif isinstance(phase, TurnIntroPhase):
+            self.render_strip_rows(draw, [(game.active_player_name.upper(), color), ("SHOOTS", GOLD), (self.strip_text(phase.subtitle.upper(), 10), WHITE), ("A SKIP", GREEN)])
             return
-        elif game.scene in ("opening_family", "opening_reply", "targets"):
-            if game.scene == "targets":
+        elif isinstance(phase, (OpeningFamilyPhase, OpeningReplyPhase, TargetPhase)):
+            if isinstance(phase, TargetPhase):
                 self.render_target_legend(draw, game)
                 return
             self.render_strip_rows(
@@ -376,20 +390,19 @@ class Renderer:
                 ],
             )
             return
-        elif game.scene == "move_animation":
-            self.render_strip_rows(draw, [(self.strip_text(game.last_quality, 10), GOLD), (self.strip_text(game.last_move_san, 10), WHITE), ("MOVING", GREEN), ("", DIM)])
+        elif isinstance(phase, MoveAnimationPhase):
+            self.render_strip_rows(draw, [(self.strip_text(phase.animation.quality, 10), GOLD), (self.strip_text(phase.animation.san, 10), WHITE), ("MOVING", GREEN), ("", DIM)])
             return
-        elif game.scene == "post_move_hold":
+        elif isinstance(phase, PostMoveHoldPhase):
             self.render_strip_rows(draw, [(self.strip_text(game.last_quality, 10), GOLD), (self.strip_text(game.last_move_san, 10), WHITE), ("LANDED", GREEN), ("", DIM)])
             return
-        elif game.scene == "thinking":
+        elif isinstance(phase, ThinkingPhase):
             self.render_strip_rows(draw, [(game.active_player_name.upper(), color), ("THINK", GOLD), ("ENGINE", WHITE), ("WAIT", DIM)])
             return
-        elif game.scene == "result":
-            self.render_strip_rows(draw, [(self.strip_text(game.last_quality, 10), GOLD), (self.strip_text(game.last_move_san, 10), WHITE), (game.active_player_name.upper(), color), ("K NEXT", GREEN)])
-            return
         else:
-            self.render_strip_rows(draw, [("GAME", RED), ("OVER", WHITE), (self.strip_text(game.game_result, 10), GOLD), (self.strip_text(game.game_over_reason, 10), DIM)])
+            if not isinstance(phase, GameOverPhase):
+                return
+            self.render_strip_rows(draw, [("GAME", RED), ("OVER", WHITE), (self.strip_text(phase.result, 10), GOLD), (self.strip_text(phase.reason, 10), DIM)])
             return
         self.center_strip(draw, 132, top, FONT_TINY, color, BLACK)
         self.center_strip(draw, 146, bottom, FONT_TINY, WHITE, BLACK)
@@ -405,7 +418,7 @@ class Renderer:
 
     def board_status_rows(self, game):
         active_color = BLUE if game.active_player_name == "White" else RED
-        if getattr(game, "opening_recap_pending", False):
+        if isinstance(game.phase, OpeningRecapPhase):
             return [
                 ("OPENING", GOLD),
                 ("COMPLETE", WHITE),

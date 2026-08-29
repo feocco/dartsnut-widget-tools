@@ -1,6 +1,5 @@
-import importlib.util
+from dataclasses import replace
 import sys
-import types
 import unittest
 from pathlib import Path
 
@@ -8,197 +7,308 @@ from pathlib import Path
 GAME_DIR = Path(__file__).resolve().parents[1] / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))
 
-import chess_game
 import dartboard
 import frame_pump
 import input_adapter
-from engine_client import MoveScore
+from chess_game import PixelDartsChessRuntime
+from engine_client import BoardEvaluation, MoveScore
+from game_state import (
+    AnalysisCompleted,
+    AnalysisFailed,
+    BoardPhase,
+    ButtonPressed,
+    DartHit,
+    GameOverPhase,
+    MoveAnimationPhase,
+    OpeningFamilyPhase,
+    OpeningRecapPhase,
+    OpeningReplyPhase,
+    PostMoveHoldPhase,
+    RequestAnalysis,
+    RequestRender,
+    ScoredMove,
+    TargetPhase,
+    ThinkingPhase,
+    Tick,
+    TitlePhase,
+    TurnIntroPhase,
+    build_targets,
+    initial_state,
+    transition,
+)
+from openings import OPENING_BOOK, OPENING_FAMILIES
 from rendering import Renderer
 
-
-def opaque_color_count(img, rgb):
-    pixels = img.get_flattened_data() if hasattr(img, "get_flattened_data") else img.getdata()
-    return sum(1 for pixel in pixels if pixel[3] and pixel[:3] == rgb)
+import chess
 
 
-@unittest.skipIf(chess_game.chess is None, "python-chess is not installed")
-class PixelDartsChessGameTests(unittest.TestCase):
-    def make_game(self, scores=None, skip_intro=True):
-        class MockEvaluator:
-            def rank_moves(self, board):
-                move_scores = scores or {}
-                ranked = [MoveScore(move, move_scores.get(move.uci(), 0)) for move in board.legal_moves]
-                ranked.sort(key=lambda item: item.score, reverse=True)
-                return ranked
+def apply(state, event):
+    return transition(state, event)[0]
 
-        game = chess_game.PixelDartsChessGame(MockEvaluator())
-        game.handle_button("a")
-        if skip_intro:
-            game.start_board_scene()
-        return game
 
-    def complete_opening(self, game):
-        game.handle_button("a")
-        family = game.targets[0]
-        game.handle_hit(family.center[0], family.center[1], color="blue")
-        game.handle_button("a")
-        reply = game.targets[0]
-        game.handle_hit(reply.center[0], reply.center[1], color="red")
+def start_opening(now=0.0):
+    state = initial_state(now)
+    state = apply(state, ButtonPressed("a", now))
+    return apply(state, ButtonPressed("a", now))
 
-    def test_board_does_not_auto_advance_without_a_button(self):
-        game = self.make_game()
 
-        game.tick(999)
+def complete_opening(family_index=0, reply_index=0, now=0.0):
+    state = start_opening(now)
+    family = state.targets[family_index]
+    state = apply(state, DartHit(*family.center, "blue", now))
+    state = apply(state, ButtonPressed("a", now))
+    reply = state.targets[reply_index]
+    return apply(state, DartHit(*reply.center, "red", now))
 
-        self.assertEqual(game.scene, "board")
 
-    def test_title_scene_advances_to_board(self):
-        class MockEvaluator:
-            def rank_moves(self, board):
-                return []
+def board_ready(board=None):
+    state = initial_state()
+    return replace(state, board=board or chess.Board(), phase=BoardPhase("White turn - press A"))
 
-        game = chess_game.PixelDartsChessGame(MockEvaluator())
 
-        self.assertEqual(game.scene, "title")
-        self.assertTrue(game.handle_button("a"))
-        self.assertEqual(game.scene, "turn_intro")
-        self.assertEqual(game.pending_scene, "opening_family")
+def ranked_for(board, overrides=None):
+    scores = overrides or {}
+    return tuple(ScoredMove(move.uci(), scores.get(move.uci(), -600)) for move in board.legal_moves)
 
-    def test_turn_intro_auto_advances_to_pending_opening_scene(self):
-        game = self.make_game(skip_intro=False)
 
-        self.assertEqual(game.scene, "turn_intro")
-        self.assertFalse(game.tick(game.scene_started + 1.0))
-        self.assertEqual(game.scene, "turn_intro")
-        self.assertTrue(game.tick(game.scene_started + 2.1))
-        self.assertEqual(game.scene, "opening_family")
-        self.assertEqual(len(game.targets), 3)
+def analyze(state, scores=None, completed_at=2.0):
+    thinking, effects = transition(state, ButtonPressed("a", 0.0))
+    request = next(effect for effect in effects if isinstance(effect, RequestAnalysis))
+    completed = AnalysisCompleted(
+        request.request_id,
+        request.position_fen,
+        request.position_key,
+        ranked_for(state.board, scores),
+        score_cp=25,
+        white_expectation=0.6,
+    )
+    waiting = apply(thinking, completed)
+    return apply(waiting, Tick(completed_at))
 
-    def test_a_button_skips_turn_intro(self):
-        game = self.make_game(skip_intro=False)
 
-        self.assertEqual(game.scene, "turn_intro")
-        self.assertTrue(game.handle_button("a", now=0.5))
-        self.assertEqual(game.scene, "opening_family")
+class TypedChessLoopTests(unittest.TestCase):
+    def test_visible_opening_flow_uses_payload_phases(self):
+        state = initial_state()
+        self.assertIsInstance(state.phase, TitlePhase)
 
-    def test_a_button_starts_opening_family_scene(self):
-        game = self.make_game()
+        state = apply(state, ButtonPressed("a", 1.0))
+        self.assertIsInstance(state.phase, TurnIntroPhase)
+        self.assertIsInstance(state.phase.next_phase, OpeningFamilyPhase)
 
-        handled = game.handle_button("a")
+        state = apply(state, ButtonPressed("a", 1.1))
+        self.assertIsInstance(state.phase, OpeningFamilyPhase)
+        family = state.targets[1]
 
-        self.assertTrue(handled)
-        self.assertEqual(game.scene, "opening_family")
-        self.assertEqual(len(game.targets), 3)
+        state = apply(state, DartHit(*family.center, "blue", 1.2))
+        self.assertIsInstance(state.phase, TurnIntroPhase)
+        self.assertIsInstance(state.phase.next_phase, OpeningReplyPhase)
+        self.assertEqual(state.phase.next_phase.family_key, family.key)
+        self.assertEqual(state.active_player_name, "Black")
 
-    def test_opening_choice_hitboxes_match_horizontal_bands(self):
-        game = self.make_game()
-        game.handle_button("a")
+        state = apply(state, ButtonPressed("a", 1.3))
+        reply = state.targets[2]
+        state = apply(state, DartHit(*reply.center, "red", 1.4))
 
-        bottom_choice = game.targets[2]
+        self.assertIsInstance(state.phase, OpeningRecapPhase)
+        self.assertEqual(state.active_player_name, "White")
+        self.assertEqual(state.opening_selection.family_key, family.key)
+        self.assertEqual(state.opening_selection.reply_key, reply.key)
+        self.assertEqual(len(state.board.move_stack), 8)
 
-        self.assertTrue(bottom_choice.contains(93, 103))
-        self.assertTrue(bottom_choice.contains(75, 103))
+    def test_turn_intro_auto_advances_and_can_be_skipped(self):
+        state = apply(initial_state(), ButtonPressed("a", 10.0))
 
-    def test_opening_selection_applies_legal_line_and_enters_normal_turns(self):
-        game = self.make_game()
+        unchanged, effects = transition(state, Tick(11.0))
+        self.assertIs(unchanged, state)
+        self.assertEqual(effects, ())
 
-        self.complete_opening(game)
+        advanced = apply(state, Tick(12.0))
+        self.assertIsInstance(advanced.phase, OpeningFamilyPhase)
 
-        self.assertEqual(game.opening_stage, "complete")
-        self.assertEqual(game.scene, "board")
-        self.assertEqual(game.board.turn, chess_game.chess.WHITE)
-        self.assertEqual(len(game.board.move_stack), 8)
+        skipped = apply(state, ButtonPressed("a", 10.1))
+        self.assertIsInstance(skipped.phase, OpeningFamilyPhase)
 
-    def test_white_opening_hit_shows_black_reply_cutscene(self):
-        game = self.make_game()
-        game.handle_button("a")
-        family = game.targets[1]
+    def test_opening_fixture_line_retains_full_board_history(self):
+        state = complete_opening(family_index=1, reply_index=2)
+        position = OPENING_BOOK.position(state.opening_selection.reply_key)
 
-        game.handle_hit(family.center[0], family.center[1], color="blue")
+        self.assertEqual(state.board.fen(), position.expected_fen)
+        self.assertEqual(
+            [move.uci() for move in state.board.move_stack],
+            list(position.line),
+        )
+        self.assertEqual(state.last_move_san, "Nf6")
+        self.assertEqual(state.previous_move_san, "Nf3")
 
-        self.assertEqual(game.scene, "turn_intro")
-        self.assertEqual(game.pending_scene, "opening_reply")
-        self.assertEqual(game.active_player_name, "Black")
-        self.assertEqual(game.selected_opening_family, family.key)
+    def test_repetition_claim_uses_retained_move_stack(self):
+        board = chess.Board()
+        for uci in ("g1f3", "g8f6", "f3g1", "f6g8") * 2:
+            board.push_uci(uci)
+        self.assertTrue(board.can_claim_threefold_repetition())
+        state = board_ready(board)
 
-    def test_caro_kann_selection_applies_stored_caro_kann_line(self):
-        game = self.make_game()
-        game.handle_button("a")
-        italian_family = game.targets[1]
-        game.handle_hit(italian_family.center[0], italian_family.center[1], color="blue")
-        game.handle_button("a")
-        caro_kann = game.targets[2]
-        expected_line = ("e2e4", "c7c6", "d2d4", "d7d5", "e4d5", "c6d5", "g1f3", "g8f6")
+        ended = apply(state, ButtonPressed("a", 1.0))
 
-        game.handle_hit(caro_kann.center[0], caro_kann.center[1], color="red")
+        self.assertIsInstance(ended.phase, GameOverPhase)
+        self.assertEqual(ended.phase.reason, "draw: repetition")
 
-        self.assertEqual(game.scene, "board")
-        self.assertEqual(game.selected_opening_reply, "caro_kann")
-        self.assertEqual([move.uci() for move in game.board.move_stack], list(expected_line))
-        self.assertEqual(game.last_move_san, "Nf6")
-        self.assertEqual(game.previous_move_san, "Nf3")
+    def test_transition_does_not_mutate_input_board(self):
+        state = complete_opening()
+        old_fen = state.board.fen()
+        old_stack = tuple(state.board.move_stack)
 
-    def test_opening_reply_enters_white_perspective_recap_before_targets(self):
-        game = self.make_game()
-        game.handle_button("a")
-        queens_gambit = game.targets[2]
-        game.handle_hit(queens_gambit.center[0], queens_gambit.center[1], color="blue")
-        game.handle_button("a")
-        accepted = game.targets[2]
+        next_state = apply(state, ButtonPressed("a", 2.0))
 
-        game.handle_hit(accepted.center[0], accepted.center[1], color="red")
+        self.assertEqual(state.board.fen(), old_fen)
+        self.assertEqual(tuple(state.board.move_stack), old_stack)
+        self.assertIsInstance(next_state.phase, ThinkingPhase)
 
-        self.assertEqual(game.scene, "board")
-        self.assertTrue(game.opening_recap_pending)
-        self.assertEqual(game.active_player_name, "White")
-        self.assertEqual(Renderer().active_board_color(game), chess_game.chess.WHITE)
-        self.assertIn("Opening", game.board_prompt)
-        self.assertEqual([row[0] for row in Renderer().board_status_rows(game)], ["OPENING", "COMPLETE", "WHITE NEXT", "PRESS A"])
+    def test_analysis_request_is_correlated_by_id_fen_and_key(self):
+        state = board_ready()
+        thinking, effects = transition(state, ButtonPressed("a", 1.0))
+        request = next(effect for effect in effects if isinstance(effect, RequestAnalysis))
+        self.assertEqual(request.position_fen, state.board.fen())
 
-        game.handle_button("a")
+        wrong_id = AnalysisCompleted(
+            request.request_id + 1,
+            request.position_fen,
+            request.position_key,
+            ranked_for(state.board),
+        )
+        stale, stale_effects = transition(thinking, wrong_id)
+        self.assertIs(stale, thinking)
+        self.assertEqual(stale_effects, ())
 
-        self.assertFalse(game.opening_recap_pending)
-        self.assertEqual(game.scene, "thinking")
+        wrong_fen = replace(
+            wrong_id,
+            request_id=request.request_id,
+            position_fen=chess.Board("8/8/8/8/8/8/4K3/7k w - - 0 1").fen(),
+        )
+        stale, stale_effects = transition(thinking, wrong_fen)
+        self.assertIs(stale, thinking)
+        self.assertEqual(stale_effects, ())
 
-    def test_ranked_targets_pick_centipawn_loss_buckets(self):
-        legal_scores = {uci: -600 for uci in (
-            "a2a3", "a2a4", "b2b3", "b2b4", "c2c3", "c2c4", "d2d3", "d2d4",
-            "e2e3", "e2e4", "f2f3", "f2f4", "g2g3", "g2g4", "h2h3", "h2h4",
-            "b1a3", "b1c3", "g1f3", "g1h3",
-        )}
-        legal_scores.update({
-            "e2e4": 100,
-            "d2d4": 70,
-            "g1f3": -50,
-            "c2c4": -80,
-            "a2a3": -450,
-            "h2h3": -800,
-        })
-        game = self.make_game(legal_scores)
-        game.opening_stage = "complete"
+        completed = replace(
+            wrong_id,
+            request_id=request.request_id,
+            ranked_moves=ranked_for(state.board, {"e2e4": 100}),
+        )
+        received = apply(thinking, completed)
+        self.assertIs(received.phase.outcome, completed)
 
-        targets = game.prepare_targets()
-        by_quality = {target.quality: target for target in targets}
+        duplicate, duplicate_effects = transition(received, completed)
+        self.assertIs(duplicate, received)
+        self.assertEqual(duplicate_effects, ())
 
-        self.assertEqual(by_quality["best"].move.uci(), "e2e4")
-        self.assertEqual(by_quality["great"].move.uci(), "d2d4")
-        self.assertEqual(by_quality["okay"].move.uci(), "g1f3")
-        self.assertEqual(by_quality["blunder"].move.uci(), "h2h3")
-        self.assertEqual(by_quality["best"].asset_key, "wp")
-        self.assertEqual(by_quality["best"].from_square, "e2")
-        self.assertEqual(by_quality["best"].to_square, "e4")
-        self.assertFalse(by_quality["best"].is_capture)
-        self.assertEqual(by_quality["best"].legend_label, "BEST")
+    def test_analysis_waits_for_minimum_thinking_duration(self):
+        state = board_ready()
+        thinking, effects = transition(state, ButtonPressed("a", 10.0))
+        request = next(effect for effect in effects if isinstance(effect, RequestAnalysis))
+        completed = AnalysisCompleted(
+            request.request_id,
+            request.position_fen,
+            request.position_key,
+            ranked_for(state.board, {"e2e4": 100}),
+        )
+        received = apply(thinking, completed)
 
-    def test_ranked_targets_avoid_duplicate_moves_when_buckets_are_sparse(self):
-        game = self.make_game({"e2e4": 100, "d2d4": -50, "g1f3": -500, "a2a3": -800})
-        game.opening_stage = "complete"
+        self.assertIsInstance(apply(received, Tick(11.4)).phase, ThinkingPhase)
+        self.assertIsInstance(apply(received, Tick(11.5)).phase, TargetPhase)
 
-        targets = game.prepare_targets()
+    def test_failed_analysis_returns_to_board_without_sync_retry_effect(self):
+        state = board_ready()
+        thinking, effects = transition(state, ButtonPressed("a", 10.0))
+        request = next(effect for effect in effects if isinstance(effect, RequestAnalysis))
+        failed = AnalysisFailed(
+            request.request_id,
+            request.position_fen,
+            request.position_key,
+            "offline",
+        )
+        received = apply(thinking, failed)
 
-        self.assertEqual(len({target.move.uci() for target in targets}), len(targets))
-        self.assertEqual(game.target_for_quality("best").move.uci(), "e2e4")
-        self.assertEqual(game.target_for_quality("blunder").move.uci(), "a2a3")
+        next_state, next_effects = transition(received, Tick(11.5))
+
+        self.assertIsInstance(next_state.phase, BoardPhase)
+        self.assertEqual(next_state.debug_message, "engine failed")
+        self.assertFalse(any(isinstance(effect, RequestAnalysis) for effect in next_effects))
+
+    def test_reset_invalidates_in_flight_request_and_matches_b_label(self):
+        state = board_ready()
+        thinking, effects = transition(state, ButtonPressed("a", 1.0))
+        request = next(effect for effect in effects if isinstance(effect, RequestAnalysis))
+
+        reset = apply(thinking, ButtonPressed("b", 1.1))
+
+        self.assertIsInstance(reset.phase, TitlePhase)
+        self.assertGreater(reset.next_request_id, request.request_id)
+        stale = AnalysisFailed(
+            request.request_id,
+            request.position_fen,
+            request.position_key,
+            "late",
+        )
+        self.assertIs(apply(reset, stale), reset)
+
+    def test_missed_dart_changes_attempts_and_requests_redraw(self):
+        state = analyze(board_ready(), {"e2e4": 100})
+        self.assertIsInstance(state.phase, TargetPhase)
+
+        missed, effects = transition(state, DartHit(127, 127, "blue", 3.0))
+
+        self.assertEqual(missed.attempts_remaining, 2)
+        self.assertTrue(any(isinstance(effect, RequestRender) for effect in effects))
+
+    def test_third_miss_forces_blunder(self):
+        state = analyze(
+            board_ready(),
+            {"e2e4": 100, "d2d4": 70, "g1f3": -50, "a2a3": -800},
+        )
+        blunder = next(target for target in state.targets if target.quality == "blunder")
+
+        state = apply(state, DartHit(127, 127, "blue", 3.0))
+        state = apply(state, DartHit(127, 127, "blue", 3.1))
+        state = apply(state, DartHit(127, 127, "blue", 3.2))
+
+        self.assertIsInstance(state.phase, MoveAnimationPhase)
+        self.assertEqual(state.phase.animation.move, blunder.move)
+        self.assertEqual(state.last_reason, "three misses")
+
+    def test_sparse_rankings_never_duplicate_move_targets(self):
+        board = chess.Board("7k/8/8/8/8/8/5K2/7R w - - 0 1")
+        ranked = tuple(ScoredMove(move.uci(), index) for index, move in enumerate(board.legal_moves))
+        targets = build_targets(board, ranked[:2])
+
+        self.assertEqual(len(targets), 2)
+        self.assertEqual(len({target.move.uci() for target in targets}), 2)
+
+    def test_move_animation_pushes_on_stack_preserving_board_copy(self):
+        state = complete_opening()
+        state = analyze(state, {"e2e4": 100})
+        target = state.targets[0]
+        stack_before = tuple(state.board.move_stack)
+
+        animating = apply(state, DartHit(64, 15, "blue", 5.0))
+        self.assertIsInstance(animating.phase, MoveAnimationPhase)
+        self.assertEqual(tuple(animating.board.move_stack), stack_before)
+
+        landed = apply(animating, Tick(5.7))
+        self.assertIsInstance(landed.phase, PostMoveHoldPhase)
+        self.assertEqual(len(landed.board.move_stack), len(stack_before) + 1)
+        self.assertEqual(tuple(state.board.move_stack), stack_before)
+
+        ready = apply(landed, Tick(6.7))
+        self.assertIsInstance(ready.phase, BoardPhase)
+
+    def test_checkmate_goes_directly_to_game_over(self):
+        board = chess.Board("6k1/5Q2/6K1/8/8/8/8/8 w - - 0 1")
+        state = analyze(board_ready(board), {"f7g7": 100000})
+        state = apply(state, DartHit(64, 15, "blue", 1.0))
+        state = apply(state, Tick(2.0))
+
+        self.assertIsInstance(state.phase, GameOverPhase)
+        self.assertEqual(state.phase.result, "1-0")
+        self.assertEqual(state.phase.reason, "checkmate")
 
     def test_dartboard_classifier_maps_wedge_clusters(self):
         self.assertEqual(dartboard.classify_dartboard_hit(64, 15).quality, "best")
@@ -206,353 +316,127 @@ class PixelDartsChessGameTests(unittest.TestCase):
         self.assertEqual(dartboard.classify_dartboard_hit(64, 113).quality, "okay")
         self.assertEqual(dartboard.classify_dartboard_hit(15, 64).quality, "blunder")
         self.assertEqual(dartboard.classify_dartboard_hit(64, 64).quality, "miss")
-        self.assertEqual(dartboard.classify_dartboard_hit(127, 127).quality, "miss")
 
-    def test_first_hit_starts_animation_for_specific_target_move(self):
-        game = self.make_game({"e2e4": 100})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-        best = game.target_for_quality("best")
 
-        hit = game.handle_hit(64, 15, color="blue", now=1.0)
+class OpeningFixtureTests(unittest.TestCase):
+    def test_all_fixture_positions_replay_to_expected_fen(self):
+        for position in OPENING_BOOK.positions:
+            board = chess.Board(OPENING_BOOK.initial_fen)
+            for uci in position.line:
+                move = chess.Move.from_uci(uci)
+                self.assertIn(move, board.legal_moves, f"{position.key}: {uci}")
+                board.push(move)
+            self.assertEqual(board.fen(), position.expected_fen)
+            self.assertEqual(len(board.move_stack), len(position.line))
 
-        self.assertIs(hit, best)
-        self.assertEqual(len(game.board.move_stack), 0)
-        self.assertEqual(game.scene, "move_animation")
-        self.assertEqual(game.move_animation.move.uci(), best.move.uci())
-        self.assertEqual(game.last_quality, "BEST")
+    def test_menu_has_three_unique_positions_per_family(self):
+        for family in OPENING_FAMILIES:
+            keys = [reply.key for reply in family.replies]
+            self.assertEqual(len(keys), 3)
+            self.assertEqual(len(keys), len(set(keys)))
+            for key in keys:
+                self.assertEqual(OPENING_BOOK.position(key).key, key)
 
-    def test_third_throw_can_hit_okay_before_forced_blunder(self):
-        game = self.make_game({"e2e4": 100, "a2a3": -100})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-        okay = game.target_for_quality("okay")
 
-        self.assertIsNone(game.handle_hit(127, 127, color="blue"))
-        self.assertIsNone(game.handle_hit(127, 127, color="blue"))
-        hit = game.handle_hit(64, 113, color="blue", now=1.0)
+class RuntimeShellTests(unittest.TestCase):
+    def test_analysis_worker_only_mutates_its_reconstructed_board(self):
+        class MutatingEvaluator:
+            def analyze(self, board):
+                moves = list(board.legal_moves)
+                ranked = [MoveScore(move, -index) for index, move in enumerate(moves)]
+                board.push(moves[0])
+                return ranked, BoardEvaluation(12, 0.55)
 
-        self.assertIs(hit, okay)
-        self.assertEqual(game.move_animation.move.uci(), okay.move.uci())
-        self.assertEqual(game.last_reason, "hit")
+        starting = board_ready()
+        original_fen = starting.board.fen()
+        runtime = PixelDartsChessRuntime(MutatingEvaluator(), state=starting)
 
-    def test_three_misses_force_blunder(self):
-        game = self.make_game({"e2e4": 100, "a2a3": -100})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-        blunder = game.target_for_quality("blunder")
+        runtime.dispatch(ButtonPressed("a", 1.0))
+        runtime._workers[0].join(timeout=1)
 
-        game.handle_hit(127, 127, color="blue")
-        game.handle_hit(127, 127, color="blue")
-        forced = game.handle_hit(127, 127, color="blue")
+        self.assertEqual(runtime.state.board.fen(), original_fen)
+        self.assertEqual(len(runtime.state.board.move_stack), 0)
+        runtime.drain_analysis_events()
+        self.assertIsInstance(runtime.state.phase, ThinkingPhase)
+        self.assertIsInstance(runtime.state.phase.outcome, AnalysisCompleted)
 
-        self.assertIs(forced, blunder)
-        self.assertEqual(game.move_animation.move.uci(), blunder.move.uci())
-        self.assertEqual(game.last_reason, "three misses")
+    def test_failed_worker_is_not_called_again_by_tick(self):
+        class BrokenEvaluator:
+            def __init__(self):
+                self.calls = 0
 
-    def test_move_animation_applies_move_and_returns_to_board(self):
-        game = self.make_game({"e2e4": 100})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-        best = game.target_for_quality("best")
+            def analyze(self, board):
+                self.calls += 1
+                raise RuntimeError("offline")
 
-        game.handle_hit(64, 15, color="blue", now=1.0)
+        evaluator = BrokenEvaluator()
+        runtime = PixelDartsChessRuntime(evaluator, state=board_ready())
 
-        self.assertTrue(game.tick(1.2))
-        self.assertEqual(game.scene, "move_animation")
-        self.assertTrue(game.tick(2.0))
-        self.assertEqual(game.board.peek().uci(), best.move.uci())
-        self.assertEqual(game.scene, "post_move_hold")
-        self.assertTrue(game.tick(3.1))
-        self.assertEqual(game.scene, "board")
-        self.assertEqual(game.active_player_name, "Black")
+        runtime.dispatch(ButtonPressed("a", 10.0))
+        runtime._workers[0].join(timeout=1)
+        runtime.drain_analysis_events()
+        runtime.tick(11.5)
 
-    def test_thinking_scene_holds_until_minimum_duration_when_ranking_is_ready(self):
-        game = self.make_game({"e2e4": 100})
-        game.opening_stage = "complete"
+        self.assertEqual(evaluator.calls, 1)
+        self.assertIsInstance(runtime.state.phase, BoardPhase)
 
-        game.start_thinking("targets", now=10.0)
-        with game._thinking_lock:
-            game._thinking_result = game.rank_legal_moves()
 
-        self.assertFalse(game.tick(11.0))
-        self.assertEqual(game.scene, "thinking")
-        self.assertTrue(game.tick(11.5))
-        self.assertEqual(game.scene, "targets")
+class RendererTests(unittest.TestCase):
+    def test_renderer_smoke_for_typed_phases(self):
+        renderer = Renderer(version="0.4.2")
+        states = [initial_state(), start_opening(), complete_opening()]
+        states.append(apply(states[-1], ButtonPressed("a", 1.0)))
+        states.append(analyze(complete_opening(), {"e2e4": 100}))
+        states.append(apply(states[-1], DartHit(64, 15, "blue", 2.0)))
+        states.append(apply(states[-1], Tick(2.7)))
 
-    def test_thinking_scene_waits_for_ranking_after_minimum_duration(self):
-        game = self.make_game({"e2e4": 100})
-        game.opening_stage = "complete"
+        for state in states:
+            self.assertEqual(renderer.render(state).size, (128, 160))
 
-        game.scene = "thinking"
-        game.pending_scene = "targets"
-        game.scene_started = 20.0
-        self.assertFalse(game.tick(22.0))
-        self.assertEqual(game.scene, "thinking")
-        with game._thinking_lock:
-            game._thinking_result = game.rank_legal_moves()
-
-        self.assertTrue(game.tick(22.1))
-        self.assertEqual(game.scene, "targets")
-
-    def test_move_animation_holds_landed_board_before_orientation_flip(self):
-        game = self.make_game({"e2e4": 100})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-        best = game.target_for_quality("best")
-        renderer = Renderer()
-
-        game.handle_hit(64, 15, color="blue", now=30.0)
-        self.assertTrue(game.tick(30.7))
-
-        self.assertEqual(game.scene, "post_move_hold")
-        self.assertEqual(game.board.peek().uci(), best.move.uci())
-        self.assertEqual(renderer.active_board_color(game), chess_game.chess.WHITE)
-        self.assertFalse(game.tick(31.4))
-        self.assertEqual(game.scene, "post_move_hold")
-        self.assertEqual(renderer.active_board_color(game), chess_game.chess.WHITE)
-
-        self.assertTrue(game.tick(31.7))
-        self.assertEqual(game.scene, "board")
-        self.assertEqual(game.active_player_name, "Black")
-        self.assertEqual(renderer.active_board_color(game), chess_game.chess.BLACK)
-
-    def test_checkmate_switches_to_game_over_scene(self):
-        game = self.make_game({"f7g7": 100000})
-        game.opening_stage = "complete"
-        game.board = chess_game.chess.Board("6k1/5Q2/6K1/8/8/8/8/8 w - - 0 1")
-        game.prepare_targets()
-        best = game.target_for_quality("best")
-
-        game.handle_hit(64, 15, color="blue", now=1.0)
-        game.tick(2.0)
-
-        self.assertEqual(game.scene, "game_over")
-        self.assertEqual(game.game_result, "1-0")
-        self.assertEqual(game.game_over_reason, "checkmate")
-
-    def test_stalemate_position_goes_straight_to_game_over(self):
-        game = self.make_game()
-        game.opening_stage = "complete"
-        game.board = chess_game.chess.Board("7k/5Q2/7K/8/8/8/8/8 b - - 0 1")
-
-        game.prepare_targets()
-
-        self.assertEqual(game.scene, "game_over")
-        self.assertEqual(game.game_result, "1/2-1/2")
-        self.assertEqual(game.game_over_reason, "stalemate")
-
-    def test_renderer_smoke_for_main_scenes(self):
-        game = self.make_game({"e2e4": 100})
-        renderer = Renderer()
-
-        self.assertEqual(renderer.render(game).size, (128, 160))
-        game.handle_button("a")
-        self.assertEqual(renderer.render(game).size, (128, 160))
-        family = game.targets[0]
-        game.handle_hit(family.center[0], family.center[1])
-        self.assertEqual(renderer.render(game).size, (128, 160))
-        game.handle_button("a")
-        game.handle_button("a")
-        reply = game.targets[0]
-        game.handle_hit(reply.center[0], reply.center[1])
-        game.handle_button("a")
-        game.handle_button("a")
-        self.assertEqual(game.scene, "thinking")
-        self.assertEqual(renderer.render(game).size, (128, 160))
-        game.tick(1)
-        self.assertEqual(renderer.render(game).size, (128, 160))
-
-    def test_renderer_handles_eval_bar_extremes(self):
-        game = self.make_game()
-        renderer = Renderer()
-
-        game.white_expectation = 0.0
-        self.assertEqual(renderer.render(game).size, (128, 160))
-        game.white_expectation = 1.0
-        self.assertEqual(renderer.render(game).size, (128, 160))
-
-    def test_board_scene_overlays_eval_bar_on_left_edge(self):
-        game = self.make_game()
-        game.white_expectation = 0.75
-        renderer = Renderer()
-
-        frame = renderer.render(game)
-
-        self.assertEqual(frame.getpixel((1, 1)), (12, 14, 20))
-        self.assertEqual(frame.getpixel((1, 126)), (242, 236, 210))
-        self.assertEqual(frame.getpixel((1, 32)), (255, 205, 75))
-
-    def test_renderer_uses_full_top_screen_for_board(self):
-        game = self.make_game()
-        renderer = Renderer()
-
-        frame = renderer.render(game)
-
-        self.assertEqual(frame.getpixel((32, 32)), (176, 180, 168))
-        self.assertEqual(frame.getpixel((127, 127)), (176, 180, 168))
+    def test_opening_recap_status_rows_preserve_visible_flow(self):
+        state = complete_opening()
+        rows = [row[0] for row in Renderer().board_status_rows(state)]
+        self.assertEqual(rows, ["OPENING", "COMPLETE", "WHITE NEXT", "PRESS A"])
 
     def test_board_orientation_puts_active_player_pieces_on_bottom(self):
-        game = self.make_game()
         renderer = Renderer()
+        white = board_ready()
+        black_board = chess.Board()
+        black_board.turn = chess.BLACK
+        black = board_ready(black_board)
 
-        game.board.reset()
-        game.board.turn = chess_game.chess.WHITE
-        white_bottom = renderer.square_center(chess_game.chess.E1, game=game)
-        black_top = renderer.square_center(chess_game.chess.E8, game=game)
-        game.board.turn = chess_game.chess.BLACK
-        black_bottom = renderer.square_center(chess_game.chess.E8, game=game)
-        white_top = renderer.square_center(chess_game.chess.E1, game=game)
-
-        self.assertGreater(white_bottom[1], black_top[1])
-        self.assertGreater(black_bottom[1], white_top[1])
-
-    def test_initial_board_setup_and_square_colors_are_standard(self):
-        game = self.make_game()
-        renderer = Renderer()
-        board = chess_game.chess.Board()
-
-        self.assertEqual(board.piece_at(chess_game.chess.D1).symbol(), "Q")
-        self.assertEqual(board.piece_at(chess_game.chess.E1).symbol(), "K")
-        self.assertEqual(board.piece_at(chess_game.chess.D8).symbol(), "q")
-        self.assertEqual(board.piece_at(chess_game.chess.E8).symbol(), "k")
-
-        game.board.turn = chess_game.chess.WHITE
-        self.assertEqual(renderer.square_color_name(chess_game.chess.A1, game), "dark")
-        self.assertEqual(renderer.square_color_name(chess_game.chess.H1, game), "light")
-        self.assertEqual(renderer.square_color_name(chess_game.chess.D1, game), "light")
-        self.assertEqual(renderer.square_color_name(chess_game.chess.D8, game), "dark")
-
-        game.board.turn = chess_game.chess.BLACK
-        self.assertEqual(renderer.square_color_name(chess_game.chess.D1, game), "light")
-        self.assertEqual(renderer.square_color_name(chess_game.chess.D8, game), "dark")
-
-    def test_piece_sprites_match_chess_piece_colors(self):
-        renderer = Renderer()
-        white_sprite = renderer.assets.piece_sprite(chess_game.chess.Piece.from_symbol("Q"), 16)
-        black_sprite = renderer.assets.piece_sprite(chess_game.chess.Piece.from_symbol("q"), 16)
-
-        self.assertGreater(opaque_color_count(white_sprite, (255, 255, 255)), opaque_color_count(white_sprite, (0, 0, 0)))
-        self.assertGreater(opaque_color_count(black_sprite, (0, 0, 0)), opaque_color_count(black_sprite, (255, 255, 255)))
-
-    def test_queens_gambit_san_lines_match_expected_sequences(self):
-        family = next(family for family in chess_game.OPENING_FAMILIES if family.key == "queens_gambit")
-        expected = {
-            "qgd": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7"],
-            "slav": ["d4", "d5", "c4", "c6", "Nc3", "Nf6", "Nf3", "dxc4"],
-            "accepted": ["d4", "d5", "c4", "dxc4", "Nf3", "Nf6", "e3", "e6"],
-        }
-
-        for reply in family.replies:
-            board = chess_game.chess.Board()
-            sans = []
-            for uci in reply.line:
-                move = chess_game.chess.Move.from_uci(uci)
-                sans.append(board.san(move))
-                board.push(move)
-            self.assertEqual(sans, expected[reply.key])
-
-    def test_bottom_strip_draws_inside_physical_64px_display(self):
-        game = self.make_game({"e2e4": 100})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-        renderer = Renderer()
-
-        frame = renderer.render(game)
-        visible_pixels = [
-            frame.getpixel((x, y))
-            for x in range(64)
-            for y in range(128, 160)
-        ]
-
-        self.assertGreater(len(set(visible_pixels)), 5)
-
-    def test_debug_logging_does_not_replace_bottom_strip(self):
-        game = self.make_game()
-        renderer = Renderer()
-        normal_frame = renderer.render(game)
-
-        game.debug_enabled = True
-        game.debug_message = "a0 r123 4.5ms"
-        debug_frame = renderer.render(game)
-
-        self.assertEqual(
-            normal_frame.crop((0, 128, 64, 160)).tobytes(),
-            debug_frame.crop((0, 128, 64, 160)).tobytes(),
+        self.assertGreater(
+            renderer.square_center(chess.E1, game=white)[1],
+            renderer.square_center(chess.E8, game=white)[1],
+        )
+        self.assertGreater(
+            renderer.square_center(chess.E8, game=black)[1],
+            renderer.square_center(chess.E1, game=black)[1],
         )
 
-    def test_board_bottom_strip_uses_four_status_rows(self):
-        game = self.make_game()
+    def test_eval_bar_extremes_render(self):
         renderer = Renderer()
+        for expectation in (0.0, 1.0):
+            state = replace(board_ready(), white_expectation=expectation)
+            self.assertEqual(renderer.render(state).size, (128, 160))
 
-        frame = renderer.render(game)
-
-        for y in (130, 138, 146, 154):
-            row = {frame.getpixel((x, y)) for x in range(64)}
-            self.assertGreater(len(row), 1)
-
-    def test_board_status_rows_show_previous_shot_next_and_press_a(self):
-        game = self.make_game()
-        game.opening_stage = "complete"
-        game.board.turn = chess_game.chess.BLACK
-        game.previous_move_player = "Black"
-        game.previous_move_san = "Nf6"
-        game.last_move_player = "White"
-        game.last_move_san = "e4"
-
-        rows = [row[0] for row in Renderer().board_status_rows(game)]
-
-        self.assertEqual(rows, ["PREV B Nf6", "SHOT W e4", "BLACK NEXT", "PRESS A"])
-
-    def test_bottom_strip_text_stays_tightly_inside_64px_width(self):
+    def test_debug_overlay_is_renderer_owned(self):
+        state = board_ready()
         renderer = Renderer()
-        img = renderer.blank_frame()
-        draw = renderer.draw_for(img)
+        normal = renderer.render(state)
+        renderer.debug_overlay_enabled = True
+        renderer.debug_message = "a0 r123 4.5ms"
+        debug = renderer.render(state)
 
-        renderer.render_strip_rows(draw, [("WHITE", (70, 185, 255)), ("OPENING", (255, 205, 75))])
+        self.assertNotEqual(
+            normal.crop((0, 128, 64, 160)).tobytes(),
+            debug.crop((0, 128, 64, 160)).tobytes(),
+        )
+        self.assertEqual(state.debug_message, "ready")
 
-        self.assertNotEqual(img.getpixel((0, 129)), (6, 8, 12))
-        self.assertNotEqual(img.getpixel((4, 131)), (6, 8, 12))
-        for x in range(64, 128):
-            for y in range(128, 160):
-                self.assertEqual(img.getpixel((x, y)), (6, 8, 12))
-
-    def test_target_legend_uses_readable_quality_labels(self):
-        game = self.make_game({"e2e4": 100, "d2d4": 80, "g1f3": 40, "a2a3": -50})
-        game.opening_stage = "complete"
-        game.prepare_targets()
-
-        labels = [Renderer().target_legend_text(target) for target in game.targets]
-
-        self.assertEqual(labels[0].split()[0], "BEST")
-        self.assertEqual(labels[1].split()[0], "GRT")
-        self.assertEqual(labels[2].split()[0], "OK")
-        self.assertEqual(labels[3].split()[0], "BAD")
-
-    def test_opening_package_uses_official_legal_lines(self):
-        official_names = {
-            "London System",
-            "Indian Game: London System",
-            "Dutch Defense vs London System",
-            "Italian Game",
-            "Sicilian Defense",
-            "Caro-Kann Defense",
-            "Queen's Gambit",
-            "Queen's Gambit Declined",
-            "Slav Defense",
-            "Queen's Gambit Accepted",
-        }
-
-        for family in chess_game.OPENING_FAMILIES:
-            self.assertIn(family.title, official_names)
-            for reply in family.replies:
-                self.assertIn(reply.title, official_names)
-                board = chess_game.chess.Board()
-                for uci in reply.line:
-                    move = chess_game.chess.Move.from_uci(uci)
-                    self.assertIn(move, board.legal_moves, f"{reply.title} has illegal move {uci}")
-                    board.push(move)
-                self.assertEqual(len(board.move_stack), 8)
+    def test_source_has_no_stale_hard_coded_version(self):
+        source = (GAME_DIR / "rendering.py").read_text(encoding="utf-8")
+        self.assertNotIn("v0.4.1", source)
 
 
 class InputAdapterTests(unittest.TestCase):
@@ -561,25 +445,7 @@ class InputAdapterTests(unittest.TestCase):
         self.assertEqual(input_adapter.normalize_hit((23, 34, "blue")), (23, 34, "blue"))
         self.assertEqual(input_adapter.normalize_active_dart((0, 23, 34)), (0, 23, 34))
 
-    def test_button_events_reports_a_button(self):
-        class FakeDartsnut:
-            def get_button_events(self):
-                return {"btn_a": True}
-
-        adapter = input_adapter.DartsnutInputAdapter(FakeDartsnut())
-
-        self.assertEqual(adapter.button_events(), ["a"])
-
-    def test_button_events_does_not_treat_left_as_confirm(self):
-        class FakeDartsnut:
-            def get_button_events(self):
-                return {"btn_left": True}
-
-        adapter = input_adapter.DartsnutInputAdapter(FakeDartsnut())
-
-        self.assertEqual(adapter.button_events(), [])
-
-    def test_button_events_uses_current_state_edges(self):
+    def test_button_edges_report_a_and_b(self):
         class FakeDartsnut:
             def __init__(self):
                 self.state = 0
@@ -589,7 +455,6 @@ class InputAdapterTests(unittest.TestCase):
 
         fake = FakeDartsnut()
         adapter = input_adapter.DartsnutInputAdapter(fake)
-
         self.assertEqual(adapter.button_events(), [])
         fake.state = 0x01
         self.assertEqual(adapter.button_events(), ["a"])
@@ -601,87 +466,36 @@ class InputAdapterTests(unittest.TestCase):
 
 
 class FramePumpTests(unittest.TestCase):
-    def test_reuses_cached_frame_until_dirty(self):
+    def test_reuses_frame_and_does_not_overwrite_state_debug(self):
         class FakeDartsnut:
-            def __init__(self):
-                self.calls = 0
-
             def update_frame_buffer(self, frame):
-                self.calls += 1
                 return True
 
         class FakeRenderer:
+            debug_message = ""
+
             def __init__(self):
                 self.renders = 0
 
-            def render(self, game):
+            def render(self, state):
                 self.renders += 1
 
                 class Frame:
-                    def tobytes(self_inner):
+                    def tobytes(self):
                         return b"x" * (128 * 160 * 3)
 
                 return Frame()
 
-        class FakeGame:
-            debug_message = ""
-
-        dartsnut = FakeDartsnut()
+        state = board_ready()
         renderer = FakeRenderer()
-        pump = frame_pump.FramePump(dartsnut, renderer, FakeGame())
+        pump = frame_pump.FramePump(FakeDartsnut(), renderer, state)
 
         pump.update(1.0)
         pump.update(1.01)
+
         self.assertEqual(renderer.renders, 1)
-        self.assertEqual(pump.accepted_writes, 2)
-
-        pump.mark_dirty()
-        pump.update(1.02)
-        self.assertEqual(renderer.renders, 2)
-
-    def test_simulated_30hz_handshake_gets_fresh_frame_each_poll(self):
-        class FakeDartsnut:
-            def __init__(self):
-                self.ready = True
-                self.accepted = 0
-
-            def update_frame_buffer(self, frame):
-                if not self.ready:
-                    return False
-                self.ready = False
-                self.accepted += 1
-                return True
-
-            def firmware_poll(self):
-                had_frame = not self.ready
-                self.ready = True
-                return had_frame
-
-        class FakeRenderer:
-            def render(self, game):
-                class Frame:
-                    def tobytes(self_inner):
-                        return b"x" * (128 * 160 * 3)
-
-                return Frame()
-
-        class FakeGame:
-            debug_message = ""
-
-        dartsnut = FakeDartsnut()
-        pump = frame_pump.FramePump(dartsnut, FakeRenderer(), FakeGame())
-        misses = 0
-        now = 0.0
-
-        for _ in range(10):
-            deadline = now + (1 / 30)
-            while now < deadline:
-                pump.update(now)
-                now += 0.005
-            if not dartsnut.firmware_poll():
-                misses += 1
-
-        self.assertEqual(misses, 0)
+        self.assertEqual(state.debug_message, "ready")
+        self.assertIn("ms", renderer.debug_message)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "families": [
+    {
+      "id": "london",
+      "title": "London System",
+      "subtitle": "London",
+      "positions": ["london_system", "kings_indian", "dutch_defense"]
+    },
+    {
+      "id": "kings_pawn",
+      "title": "King's Pawn",
+      "subtitle": "1. e4",
+      "positions": ["italian_game", "sicilian_defense", "caro_kann"]
+    },
+    {
+      "id": "queens_gambit",
+      "title": "Queen's Gambit",
+      "subtitle": "Q Gambit",
+      "positions": ["queens_gambit_declined", "slav_defense", "queens_gambit_accepted"]
+    }
+  ]
+}
