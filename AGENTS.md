@@ -1,29 +1,60 @@
 # AGENTS.md
 
-## Repo-Specific Decisions
+## Repository boundaries
 
-- Keep this repo small: docs, sample widgets, upload helper.
-- Upload widgets through WebSocket, not SSH or firmware edits.
-- PixelBoard widgets are usually `[128, 128]`.
-- PixelDart widgets may need `[128, 160]`.
+- Keep this repository small. It owns app source, the upload tool, fixtures,
+  verification skills, and focused documentation.
+- Upload through `ws://<board-ip>:9251/ws`. Do not use SSH or edit firmware.
+- Write only under the board's `apps/` directory.
+- PixelBoard widgets use `[128, 128]`. PixelDart games use `[128, 160]`.
+- Keep each app directory name, `conf.json` id, and normalized project name
+  aligned.
+- Do not add Stockfish to cloud setup or CI.
 
-## Agent Workflows
+## Required checks
 
-- Test helper logic: `python3 -m unittest tests/test_upload_widget.py`.
-- Compile check: `python3 -m py_compile scripts/upload_widget.py widgets/codex_status_128_128/main.py`.
-- Dry-run upload first: `python3 scripts/upload_widget.py --host 192.168.1.194 --dry-run`.
-- Real upload: `python3 scripts/upload_widget.py --host 192.168.1.194`.
-- Real upload mutates board `apps/conf.json`; dry-run first.
+Run all checks before committing:
 
-## Runtime Notes
+```bash
+python3 -m scripts.check_repo
+python3 -m unittest discover -s tests -v
+python3 -m ruff check .
+python3 -m mypy
+python3 -m py_compile scripts/*.py tools/dartsnut/*.py widgets/*/main.py games/pixeldarts_chess_128_160/*.py services/stockfish_evaluator/app.py
+```
 
-- Board API: `ws://<board-ip>:9251/ws`.
-- Uploader writes under board `apps/` only.
-- Emulator uses Tkinter; use desktop-capable Python.
-- Press `P` in emulator for screenshot verification.
+Use the app manifest as the upload allowlist. Never upload hidden files,
+environment files, virtual environments, caches, bytecode, editor files,
+symlinks, undeclared files, or vendored dependencies.
 
-## Footguns
+## Board uploads
 
-- Do not upload `__pycache__` or `.pyc` files.
-- Keep widget folder name equal to `conf.json` id.
-- Preserve existing board pages unless explicitly changing them.
+Always run the read-only plan before an upload:
+
+```bash
+python3 -m tools.dartsnut plan --host "<board-ip>" --app "<app-directory>"
+python3 -m tools.dartsnut upload --host "<board-ip>" --app "<app-directory>"
+```
+
+Preserve page UUIDs, settings, field values, sibling widgets, unknown keys, and
+unrelated pages. A real upload may mutate `apps/conf.json`.
+
+## Verification skills
+
+Every supported user-facing surface has one project-local
+`.cursor/skills/verify-*` skill. Before adding a new surface, run
+`/create-verification-skill`. For a feature on an existing surface, update its
+feature map and execute the relevant skill. Do not create one skill per small
+feature.
+
+## Cursor Cloud specific instructions
+
+- Use the Electron Dartsnut Agent and its headless Python core for app
+  verification. Do not use the retired Tkinter workflow.
+- Every Cloud Agent pull request must include a real screenshot or video from
+  the run. Capture the action and resulting state, not only a final frame.
+- Use the relevant verification skill for launch, doctor, drive, evidence, and
+  cleanup steps.
+- Keep proof artifacts after cleanup and reference them in the pull request.
+- Terminal-only changes still require visual evidence of the exercised command
+  and its successful result.

@@ -3,9 +3,6 @@ import time
 from PIL import Image, ImageDraw, ImageFont
 from pydartsnut import Dartsnut
 
-
-dartsnut = Dartsnut()
-
 WIDTH, HEIGHT = 128, 128
 TITLE_FONT = ImageFont.load_default(size=22)
 TEXT_FONT = ImageFont.load_default(size=14)
@@ -33,11 +30,16 @@ def render_frame():
     return img
 
 
-try:
-    while dartsnut.running:
-        dartsnut.update_frame_buffer(render_frame())
-        time.sleep(0.5)
-except KeyboardInterrupt:
-    pass
+def main():
+    dartsnut = Dartsnut()
+    try:
+        while dartsnut.running:
+            dartsnut.update_frame_buffer(render_frame())
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+    print("codex_status_128_128 exiting...")
 
-print("codex_status_128_128 exiting...")
+
+if __name__ == "__main__":
+    main()
