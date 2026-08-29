@@ -88,6 +88,14 @@ include = ["conf.json", "main.py", "pyproject.toml"]
             with self.assertRaisesRegex(ManifestError, "forbidden"):
                 load_manifest(app)
 
+    def test_manifest_rejects_undeclared_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.make_app(Path(tmp))
+            (app / "notes.md").write_text("not for the board\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ManifestError, "omits files"):
+                load_manifest(app)
+
     def test_host_is_required(self):
         with self.assertRaises(SystemExit):
             parse_args(["plan", "--app", "widgets/sample"])

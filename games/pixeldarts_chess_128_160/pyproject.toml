@@ -26,4 +26,5 @@ include = [
   "openings.py",
   "pyproject.toml",
   "rendering.py",
+  "uv.lock",
 ]

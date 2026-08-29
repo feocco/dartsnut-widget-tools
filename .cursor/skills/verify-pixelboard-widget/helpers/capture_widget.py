@@ -4,7 +4,6 @@ import sys
 import types
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[4]
 APP = ROOT / "widgets" / "codex_status_128_128" / "main.py"
 OUTPUT = Path("/opt/cursor/artifacts/pixelboard_widget.png")

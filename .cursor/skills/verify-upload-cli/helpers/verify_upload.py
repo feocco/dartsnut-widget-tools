@@ -8,7 +8,6 @@ import subprocess
 import threading
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[4]
 
 
@@ -92,12 +91,7 @@ class Handler(socketserver.StreamRequestHandler):
             name, value = line.split(":", 1)
             headers[name.lower()] = value.strip()
         accept = base64.b64encode(
-            hashlib.sha1(
-                (
-                    headers["sec-websocket-key"]
-                    + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-                ).encode("ascii")
-            ).digest()
+            hashlib.sha1((headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode("ascii")).digest()
         ).decode("ascii")
         self.wfile.write(
             (
@@ -121,13 +115,9 @@ class Handler(socketserver.StreamRequestHandler):
         if action == "get_device_info":
             response["device_info"] = {"model": "mock-board"}
         elif action == "read_json":
-            response["content"] = base64.b64encode(
-                json.dumps(STATE.config).encode("utf-8")
-            ).decode("ascii")
+            response["content"] = base64.b64encode(json.dumps(STATE.config).encode("utf-8")).decode("ascii")
         elif action == "write_json":
-            STATE.config = json.loads(
-                base64.b64decode(request["content"]).decode("utf-8")
-            )
+            STATE.config = json.loads(base64.b64decode(request["content"]).decode("utf-8"))
         elif action == "send_file":
             STATE.files[request["file_name"]] = request["file_data"]
         elif action == "list_apps":

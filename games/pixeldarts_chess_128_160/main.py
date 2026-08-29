@@ -1,15 +1,14 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import time
-
-from pydartsnut import Dartsnut
+from pathlib import Path
 
 from chess_game import PixelDartsChessRuntime
 from frame_pump import FramePump
 from game_state import ButtonPressed, DartHit
 from input_adapter import DartsnutInputAdapter
+from pydartsnut import Dartsnut
 from rendering import Renderer
 
 

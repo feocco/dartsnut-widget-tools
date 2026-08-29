@@ -1,13 +1,9 @@
 import math
 
-from PIL import Image, ImageDraw, ImageFont
-
 from assets import ASSET_DIR, PieceAssets
 from dartboard import (
     CENTER,
-    QUALITY_COLORS,
     QUALITY_SECTORS,
-    RADIUS_DOUBLE_BULL,
     RADIUS_INNER_DOUBLE,
     RADIUS_INNER_TRIPLE,
     RADIUS_OUTER_DOUBLE,
@@ -32,7 +28,7 @@ from game_state import (
     TurnIntroPhase,
     phase_name,
 )
-
+from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 128, 160
 PLAY_HEIGHT = 128
@@ -374,7 +370,15 @@ class Renderer:
             self.render_strip_rows(draw, self.board_status_rows(game))
             return
         elif isinstance(phase, TurnIntroPhase):
-            self.render_strip_rows(draw, [(game.active_player_name.upper(), color), ("SHOOTS", GOLD), (self.strip_text(phase.subtitle.upper(), 10), WHITE), ("A SKIP", GREEN)])
+            self.render_strip_rows(
+                draw,
+                [
+                    (game.active_player_name.upper(), color),
+                    ("SHOOTS", GOLD),
+                    (self.strip_text(phase.subtitle.upper(), 10), WHITE),
+                    ("A SKIP", GREEN),
+                ],
+            )
             return
         elif isinstance(phase, (OpeningFamilyPhase, OpeningReplyPhase, TargetPhase)):
             if isinstance(phase, TargetPhase):
@@ -391,18 +395,44 @@ class Renderer:
             )
             return
         elif isinstance(phase, MoveAnimationPhase):
-            self.render_strip_rows(draw, [(self.strip_text(phase.animation.quality, 10), GOLD), (self.strip_text(phase.animation.san, 10), WHITE), ("MOVING", GREEN), ("", DIM)])
+            self.render_strip_rows(
+                draw,
+                [
+                    (self.strip_text(phase.animation.quality, 10), GOLD),
+                    (self.strip_text(phase.animation.san, 10), WHITE),
+                    ("MOVING", GREEN),
+                    ("", DIM),
+                ],
+            )
             return
         elif isinstance(phase, PostMoveHoldPhase):
-            self.render_strip_rows(draw, [(self.strip_text(game.last_quality, 10), GOLD), (self.strip_text(game.last_move_san, 10), WHITE), ("LANDED", GREEN), ("", DIM)])
+            self.render_strip_rows(
+                draw,
+                [
+                    (self.strip_text(game.last_quality, 10), GOLD),
+                    (self.strip_text(game.last_move_san, 10), WHITE),
+                    ("LANDED", GREEN),
+                    ("", DIM),
+                ],
+            )
             return
         elif isinstance(phase, ThinkingPhase):
-            self.render_strip_rows(draw, [(game.active_player_name.upper(), color), ("THINK", GOLD), ("ENGINE", WHITE), ("WAIT", DIM)])
+            self.render_strip_rows(
+                draw, [(game.active_player_name.upper(), color), ("THINK", GOLD), ("ENGINE", WHITE), ("WAIT", DIM)]
+            )
             return
         else:
             if not isinstance(phase, GameOverPhase):
                 return
-            self.render_strip_rows(draw, [("GAME", RED), ("OVER", WHITE), (self.strip_text(phase.result, 10), GOLD), (self.strip_text(phase.reason, 10), DIM)])
+            self.render_strip_rows(
+                draw,
+                [
+                    ("GAME", RED),
+                    ("OVER", WHITE),
+                    (self.strip_text(phase.result, 10), GOLD),
+                    (self.strip_text(phase.reason, 10), DIM),
+                ],
+            )
             return
         self.center_strip(draw, 132, top, FONT_TINY, color, BLACK)
         self.center_strip(draw, 146, bottom, FONT_TINY, WHITE, BLACK)

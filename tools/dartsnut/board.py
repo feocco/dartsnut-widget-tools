@@ -7,7 +7,6 @@ import struct
 from types import TracebackType
 from typing import Self
 
-
 DEFAULT_PORT = 9251
 DEFAULT_PATH = "/ws"
 
@@ -70,11 +69,9 @@ class SimpleWebSocket:
             if ":" in line
             for name, value in [line.split(":", 1)]
         }
-        expected = base64.b64encode(
-            hashlib.sha1(
-                (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode("ascii")
-            ).digest()
-        ).decode("ascii")
+        expected = base64.b64encode(hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode("ascii")).digest()).decode(
+            "ascii"
+        )
         if headers.get("sec-websocket-accept") != expected:
             raise WebSocketError("WebSocket handshake returned an invalid accept key")
 
@@ -131,10 +128,7 @@ class SimpleWebSocket:
             mask = self._recv_exact(4) if masked else b""
             payload = self._recv_exact(length) if length else b""
             if masked:
-                payload = bytes(
-                    byte ^ mask[index % 4]
-                    for index, byte in enumerate(payload)
-                )
+                payload = bytes(byte ^ mask[index % 4] for index, byte in enumerate(payload))
             if opcode == 0x8:
                 raise WebSocketError("WebSocket closed by server")
             if opcode == 0x9:

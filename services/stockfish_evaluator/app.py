@@ -6,7 +6,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import chess
 import chess.engine
 
-
 HOST = os.environ.get("SERVICE_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SERVICE_PORT", "8096"))
 STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "/usr/games/stockfish")
@@ -95,12 +94,14 @@ class Handler(BaseHTTPRequestHandler):
                 depth=payload.get("depth", DEFAULT_DEPTH),
                 movetime_ms=payload.get("movetime_ms", DEFAULT_MOVETIME_MS),
             )
-            self.send_json({
-                "fen": fen,
-                "root_score_cp": root_score.score(mate_score=100000),
-                "white_expectation": root_score.wdl(model="sf").expectation(),
-                "moves": moves,
-            })
+            self.send_json(
+                {
+                    "fen": fen,
+                    "root_score_cp": root_score.score(mate_score=100000),
+                    "white_expectation": root_score.wdl(model="sf").expectation(),
+                    "moves": moves,
+                }
+            )
         except KeyError as exc:
             self.send_json({"error": f"missing field: {exc.args[0]}"}, status=400)
         except ValueError as exc:

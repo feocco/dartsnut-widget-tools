@@ -3,9 +3,9 @@ import base64
 import json
 import os
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 from .board import DEFAULT_PATH, DEFAULT_PORT, DartsnutClient, SimpleWebSocket
 from .manifest import AppManifest, load_manifest
@@ -124,9 +124,7 @@ def verify_installed(client: DartsnutClient, app_id: str) -> None:
     response = client.request("list_apps")
     _check_response(response, "list_apps")
     apps = response.get("apps", [])
-    installed = isinstance(apps, list) and any(
-        isinstance(app, dict) and app.get("name") == app_id for app in apps
-    )
+    installed = isinstance(apps, list) and any(isinstance(app, dict) and app.get("name") == app_id for app in apps)
     if not installed:
         raise RuntimeError(f"{app_id} was not returned by list_apps")
 
@@ -159,11 +157,7 @@ def execute(command: Command) -> int:
 
         ensure_remote_dir(client, manifest.app_id)
         remote_dirs = sorted(
-            {
-                f"{manifest.app_id}/{file.relative_path.parent}"
-                for file in manifest.files
-                if str(file.relative_path.parent) != "."
-            }
+            {f"{manifest.app_id}/{file.relative_path.parent}" for file in manifest.files if str(file.relative_path.parent) != "."}
         )
         for directory in remote_dirs:
             ensure_remote_dir(client, directory)
@@ -184,9 +178,7 @@ def execute(command: Command) -> int:
 
 
 def parse_args(argv: Sequence[str]) -> Command:
-    parser = argparse.ArgumentParser(
-        description="Plan, upload, or verify a Dartsnut app over WebSocket."
-    )
+    parser = argparse.ArgumentParser(description="Plan, upload, or verify a Dartsnut app over WebSocket.")
     parser.add_argument("action", choices=("plan", "upload", "verify"))
     parser.add_argument("--host", default=os.environ.get("DARTSNUT_HOST"))
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)

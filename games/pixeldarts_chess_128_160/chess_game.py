@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from queue import Empty, SimpleQueue
 import threading
-from typing import Callable
+from collections.abc import Callable
+from queue import Empty, SimpleQueue
 
 from engine_client import build_default_evaluator, chess, require_chess
 from game_state import (

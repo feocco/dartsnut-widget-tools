@@ -5,7 +5,6 @@ from pathlib import Path
 
 from tools.dartsnut.manifest import ManifestError, load_manifest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 APP_ROOTS = (ROOT / "widgets", ROOT / "games")
 PRIVATE_LAN = re.compile(
@@ -36,13 +35,15 @@ def repository_errors():
     errors = []
     if not (ROOT / "LICENSE").is_file():
         errors.append("LICENSE is required")
-    if (ROOT / "games" / "pixeldarts_chess_128_160" / "chess").exists():
+    vendor = ROOT / "games" / "pixeldarts_chess_128_160" / "chess"
+    if vendor.is_dir() and any(path.is_file() for path in vendor.rglob("*")):
         errors.append("vendored python-chess must not be committed")
     for path in ROOT.rglob("*"):
         if (
             not path.is_file()
             or ".git" in path.parts
             or ".venv" in path.parts
+            or "dartsnut_emulator" in path.parts
             or path.suffix not in TEXT_SUFFIXES
         ):
             continue

@@ -1,7 +1,6 @@
 import math
 from dataclasses import dataclass
 
-
 CENTER = (64, 64)
 RADIUS_DOUBLE_BULL = 3
 RADIUS_SINGLE_BULL = 7
@@ -43,7 +42,7 @@ class DartboardHit:
     distance: float
 
 
-def classify_dartboard_hit(x, y):
+def classify_dartboard_hit(x: int, y: int) -> DartboardHit:
     dx = int(x) - CENTER[0]
     dy = int(y) - CENTER[1]
     distance = math.sqrt(dx * dx + dy * dy)
@@ -59,7 +58,7 @@ def classify_dartboard_hit(x, y):
     return DartboardHit("miss", sector_index, SCORES[sector_index], ring, distance)
 
 
-def ring_for_distance(distance):
+def ring_for_distance(distance: float) -> str:
     if distance < RADIUS_DOUBLE_BULL:
         return "double_bull"
     if distance < RADIUS_SINGLE_BULL:
@@ -75,6 +74,6 @@ def ring_for_distance(distance):
     return "miss"
 
 
-def sector_for_point(dx, dy):
+def sector_for_point(dx: int, dy: int) -> int:
     degrees = math.degrees(math.atan2(dy, dx)) % 360
     return int(((degrees + 9) % 360) // 18)

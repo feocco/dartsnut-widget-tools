@@ -4,10 +4,8 @@ from dataclasses import dataclass, replace
 from typing import TypeAlias
 
 import chess
-
 from dartboard import QUALITY_COLORS, QUALITY_TITLES, classify_dartboard_hit
 from openings import OPENING_BOOK, OPENING_FAMILIES, family_by_key, reply_by_key
-
 
 PLAYER_COLORS = {
     "white": "blue",
@@ -421,15 +419,15 @@ def _on_dart_hit(state: GameState, event: DartHit) -> Transition:
 
     if isinstance(phase, TargetPhase):
         quality = classify_dartboard_hit(event.x, event.y).quality
-        target = next((item for item in phase.targets if item.quality == quality), None)
-        if target is not None:
-            return _apply_move_target(state, target, event.now, "hit")
+        move_target = next((item for item in phase.targets if item.quality == quality), None)
+        if move_target is not None:
+            return _apply_move_target(state, move_target, event.now, "hit")
         return _record_miss(state, event.now, "miss")
 
-    target = next((item for item in phase.targets if item.contains(event.x, event.y)), None)
-    if target is None:
+    opening_target = next((item for item in phase.targets if item.contains(event.x, event.y)), None)
+    if opening_target is None:
         return _record_miss(state, event.now, "miss")
-    return _apply_opening_target(state, target, event.now, "hit")
+    return _apply_opening_target(state, opening_target, event.now, "hit")
 
 
 def _on_analysis_outcome(state: GameState, event: AnalysisOutcome) -> Transition:
@@ -557,9 +555,7 @@ def _apply_opening_target(
         return state, ()
     family = family_by_key(phase.family_key)
     reply = reply_by_key(family, target.key)
-    board, previous_san, previous_player, last_san, last_player, last_move = apply_opening_line(
-        reply.line
-    )
+    board, previous_san, previous_player, last_san, last_player, last_move = apply_opening_line(reply.line)
     next_state = replace(
         state,
         board=board,
@@ -739,17 +735,15 @@ def build_targets(
         available = [item for item in ranked if item[0].uci() not in selected]
         if not available:
             break
-        scored = pick_scored_move_for_quality(quality, available, best_score)
-        move, score = scored
+        selected_score = pick_scored_move_for_quality(quality, available, best_score)
+        move, score = selected_score
         selected.add(move.uci())
         piece = board.piece_at(move.from_square)
         if piece is None:
             continue
         captured = board.piece_at(move.to_square)
         if captured is None and board.is_en_passant(move):
-            captured = board.piece_at(
-                chess.square(chess.square_file(move.to_square), chess.square_rank(move.from_square))
-            )
+            captured = board.piece_at(chess.square(chess.square_file(move.to_square), chess.square_rank(move.from_square)))
         targets.append(
             MoveTarget(
                 quality=quality,
@@ -793,10 +787,7 @@ def pick_scored_move_for_quality(
             or available[0]
         )
     if quality == "blunder":
-        return (
-            worst_by_loss(available, best_score, min_loss=BLUNDER_MIN_LOSS_CP)
-            or available[-1]
-        )
+        return worst_by_loss(available, best_score, min_loss=BLUNDER_MIN_LOSS_CP) or available[-1]
     return available[0]
 
 

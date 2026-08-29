@@ -30,8 +30,7 @@ class BoardEvaluation:
 def require_chess():
     if chess is None:
         raise RuntimeError(
-            "PixelDarts Chess requires the 'chess' package. Install requirements.txt "
-            "before running this game."
+            "PixelDarts Chess requires the 'chess' package. Install requirements.txt before running this game."
         ) from chess_import_error
 
 

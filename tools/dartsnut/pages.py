@@ -17,10 +17,7 @@ def page_uuid(widget_id: str, page_title: str) -> str:
 
 def page_references_widget(page: dict[str, object], widget_id: str) -> bool:
     widgets = page.get("widgets", [])
-    return isinstance(widgets, list) and any(
-        isinstance(widget, dict) and widget.get("id") == widget_id
-        for widget in widgets
-    )
+    return isinstance(widgets, list) and any(isinstance(widget, dict) and widget.get("id") == widget_id for widget in widgets)
 
 
 def new_widget_page(widget_id: str, page_title: str) -> dict[str, object]:
@@ -55,11 +52,7 @@ def upsert_widget_page(
     matches = [
         page
         for page in pages
-        if isinstance(page, dict)
-        and (
-            page_references_widget(page, widget_id)
-            or page.get("uuid") == expected_uuid
-        )
+        if isinstance(page, dict) and (page_references_widget(page, widget_id) or page.get("uuid") == expected_uuid)
     ]
     if len(matches) > 1:
         raise PageConflictError(f"Multiple pages reference widget {widget_id}")
@@ -79,17 +72,11 @@ def upsert_widget_page(
         return updated
 
     title_match = next(
-        (
-            page
-            for page in pages
-            if isinstance(page, dict) and page.get("title") == page_title
-        ),
+        (page for page in pages if isinstance(page, dict) and page.get("title") == page_title),
         None,
     )
     if title_match is not None:
-        raise PageConflictError(
-            f"Page title {page_title!r} is already owned by another page"
-        )
+        raise PageConflictError(f"Page title {page_title!r} is already owned by another page")
     pages.append(new_widget_page(widget_id, page_title))
     return updated
 
@@ -111,11 +98,7 @@ def remove_widget_reference(
             kept_pages.append(page)
             continue
         widgets = page.get("widgets", [])
-        page["widgets"] = [
-            widget
-            for widget in widgets
-            if not (isinstance(widget, dict) and widget.get("id") == widget_id)
-        ]
+        page["widgets"] = [widget for widget in widgets if not (isinstance(widget, dict) and widget.get("id") == widget_id)]
         if page["widgets"] or not remove_empty_page:
             kept_pages.append(page)
     updated["pages"] = kept_pages

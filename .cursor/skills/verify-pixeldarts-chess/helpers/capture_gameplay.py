@@ -2,7 +2,6 @@
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[4]
 GAME = ROOT / "games" / "pixeldarts_chess_128_160"
 OUTPUT = Path("/opt/cursor/artifacts/pixeldarts_chess_gameplay.gif")
@@ -37,10 +36,7 @@ def main():
 
     state, effects = transition(state, ButtonPressed("a", 2.5))
     request = next(effect for effect in effects if isinstance(effect, RequestAnalysis))
-    ranked = tuple(
-        ScoredMove(move.uci(), 1000 - index * 100)
-        for index, move in enumerate(state.board.legal_moves)
-    )
+    ranked = tuple(ScoredMove(move.uci(), 1000 - index * 100) for index, move in enumerate(state.board.legal_moves))
     state, _ = transition(
         state,
         AnalysisCompleted(

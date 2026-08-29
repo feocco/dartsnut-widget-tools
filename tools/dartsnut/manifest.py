@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
-
 AppKind = Literal["widget", "game"]
 FORBIDDEN_NAMES = {
     ".DS_Store",
@@ -86,6 +85,17 @@ def _declared_files(root: Path, patterns: list[str]) -> tuple[AppFile, ...]:
             selected[relative] = AppFile(path, relative, path.stat().st_size)
     if not selected:
         raise ManifestError(f"No upload files declared for {root}")
+    undeclared = [
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.is_file()
+        and ".venv" not in path.parts
+        and "__pycache__" not in path.parts
+        and not _is_forbidden(path, root)
+        and PurePosixPath(path.relative_to(root).as_posix()) not in selected
+    ]
+    if undeclared:
+        raise ManifestError(f"Upload manifest omits files: {sorted(undeclared)}")
     return tuple(selected[key] for key in sorted(selected))
 
 
@@ -128,9 +138,7 @@ def load_manifest(app_dir: Path) -> AppManifest:
         raise ManifestError("[project].version must match conf.json version")
     dependencies = project.get("dependencies")
     if not isinstance(dependencies, list) or not any(
-        isinstance(item, str)
-        and re.split(r"[<>=!~\\[]", item, maxsplit=1)[0].strip().lower()
-        == "pydartsnut"
+        isinstance(item, str) and re.split(r"[<>=!~\\[]", item, maxsplit=1)[0].strip().lower() == "pydartsnut"
         for item in dependencies
     ):
         raise ManifestError("[project].dependencies must include pydartsnut")
@@ -138,13 +146,14 @@ def load_manifest(app_dir: Path) -> AppManifest:
     if not isinstance(include, list) or not all(isinstance(item, str) for item in include):
         raise ManifestError("[tool.dartsnut].include must be a list of patterns")
 
-    page_title = dartsnut.get("page_title")
-    if page_title is not None and not isinstance(page_title, str):
+    raw_page_title = dartsnut.get("page_title")
+    if raw_page_title is not None and not isinstance(raw_page_title, str):
         raise ManifestError("[tool.dartsnut].page_title must be a string")
-    if kind == "widget" and not page_title:
-        page_title = name
     if not isinstance(name, str) or not isinstance(version, str):
         raise ManifestError("conf.json needs string name and version")
+    page_title = raw_page_title if isinstance(raw_page_title, str) else None
+    if kind == "widget" and not page_title:
+        page_title = name
 
     files = _declared_files(root, include)
     mandatory = {"conf.json", "main.py", "pyproject.toml"}

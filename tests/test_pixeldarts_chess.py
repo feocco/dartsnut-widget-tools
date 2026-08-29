@@ -1,12 +1,12 @@
-from dataclasses import replace
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
-
 
 GAME_DIR = Path(__file__).resolve().parents[1] / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))
 
+import chess
 import dartboard
 import frame_pump
 import input_adapter
@@ -38,8 +38,6 @@ from game_state import (
 )
 from openings import OPENING_BOOK, OPENING_FAMILIES
 from rendering import Renderer
-
-import chess
 
 
 def apply(state, event):
@@ -285,7 +283,6 @@ class TypedChessLoopTests(unittest.TestCase):
     def test_move_animation_pushes_on_stack_preserving_board_copy(self):
         state = complete_opening()
         state = analyze(state, {"e2e4": 100})
-        target = state.targets[0]
         stack_before = tuple(state.board.move_stack)
 
         animating = apply(state, DartHit(64, 15, "blue", 5.0))
@@ -463,6 +460,18 @@ class InputAdapterTests(unittest.TestCase):
         self.assertEqual(adapter.button_events(), [])
         fake.state = 0x02
         self.assertEqual(adapter.button_events(), ["b"])
+
+    def test_emulator_button_events_take_priority_over_debounced_state(self):
+        class FakeDartsnut:
+            def get_button_events(self):
+                return {"btn_a": True, "btn_b": False}
+
+            def get_buttons(self):
+                return {"btn_a": False, "btn_b": False}
+
+        adapter = input_adapter.DartsnutInputAdapter(FakeDartsnut())
+
+        self.assertEqual(adapter.button_events(), ["a"])
 
 
 class FramePumpTests(unittest.TestCase):

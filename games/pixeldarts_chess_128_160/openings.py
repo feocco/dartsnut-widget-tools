@@ -5,7 +5,6 @@ from typing import cast
 
 import chess
 
-
 FIXTURES = Path(__file__).with_name("fixtures")
 
 
