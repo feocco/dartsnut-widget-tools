@@ -72,6 +72,19 @@ class UploadAppTests(unittest.TestCase):
 
         self.assertEqual(updated["pages"], [keep])
 
+    def test_remove_widget_reference_preserves_sibling_widgets(self):
+        stale = build_widget_page("pixeldarts_chess_128_128", "PixelDarts Chess")
+        stale["widgets"].append(
+            {"id": "clock", "position": [0, 0, 10, 10], "fields": {}}
+        )
+
+        updated = remove_widget_page_references(
+            {"pages": [stale]},
+            "pixeldarts_chess_128_128",
+        )
+
+        self.assertEqual(updated["pages"][0]["widgets"][0]["id"], "clock")
+
     def test_game_upload_helpers_do_not_require_widget_page_upsert(self):
         config = {"pages": []}
 
@@ -92,6 +105,20 @@ class UploadAppTests(unittest.TestCase):
             files = [rel.as_posix() for _, rel in iter_app_files(app_dir)]
 
         self.assertEqual(files, ["conf.json", "main.py"])
+
+    def test_iter_app_files_skips_hidden_secrets_and_symlinks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app_dir = Path(tmp) / "sample_game"
+            app_dir.mkdir()
+            (app_dir / "main.py").write_text("print('ok')\n", encoding="utf-8")
+            (app_dir / ".env").write_text("SECRET=value\n", encoding="utf-8")
+            (app_dir / ".vscode").mkdir()
+            (app_dir / ".vscode" / "settings.json").write_text("{}")
+            (app_dir / "link.py").symlink_to(app_dir / "main.py")
+
+            files = [rel.as_posix() for _, rel in iter_app_files(app_dir)]
+
+        self.assertEqual(files, ["main.py"])
 
 
 if __name__ == "__main__":

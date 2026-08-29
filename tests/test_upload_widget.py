@@ -63,6 +63,26 @@ class UploadWidgetTests(unittest.TestCase):
         self.assertEqual(updated["pages"][1]["widgets"][0]["id"], "codex_status_128_128")
         self.assertEqual(updated["pages"][1]["widgets"][0]["position"], [0, 0, 127, 127])
 
+    def test_upsert_widget_page_preserves_configured_fields_and_page_settings(self):
+        configured = build_widget_page("codex_status_128_128", "Codex Status")
+        configured["duration"] = "45"
+        configured["combination"] = "3"
+        configured["enabled"] = False
+        configured["wv"] = {"custom": True}
+        configured["future"] = "kept"
+        configured["widgets"][0]["fields"] = {"ha_url": "configured"}
+        configured["widgets"].append(
+            {"id": "clock", "position": [1, 1, 10, 10], "fields": {}}
+        )
+
+        updated = upsert_widget_page(
+            {"pages": [configured]},
+            "codex_status_128_128",
+            "Codex Status",
+        )
+
+        self.assertEqual(updated["pages"], [configured])
+
     def test_iter_widget_files_skips_python_cache_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             widget_dir = Path(tmp) / "sample_widget"

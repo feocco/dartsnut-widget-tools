@@ -26,7 +26,7 @@ class BaselineUploadContracts(unittest.TestCase):
         )
         self.assertEqual(response["content"], "ok")
 
-    def test_page_replacement_behavior_is_pinned_before_fix(self):
+    def test_configured_page_is_preserved(self):
         existing = {
             "uuid": "configured-page",
             "title": "Configured",
@@ -51,9 +51,7 @@ class BaselineUploadContracts(unittest.TestCase):
             "Configured",
         )
 
-        self.assertEqual(updated["pages"][0]["widgets"][0]["fields"], {})
-        self.assertEqual(len(updated["pages"][0]["widgets"]), 1)
-        self.assertNotEqual(updated["pages"][0]["uuid"], "configured-page")
+        self.assertEqual(updated["pages"], [existing])
 
 
 if __name__ == "__main__":

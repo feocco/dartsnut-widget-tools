@@ -11,8 +11,12 @@ import sys
 import uuid
 from pathlib import Path
 
+from tools.dartsnut.pages import (
+    remove_widget_reference as safe_remove_widget_reference,
+    upsert_widget_page as safe_upsert_widget_page,
+)
 
-DEFAULT_HOST = "192.168.1.194"
+DEFAULT_HOST = ""
 DEFAULT_PORT = 9251
 DEFAULT_PATH = "/ws"
 DEFAULT_APP = Path("games/pixeldarts_chess_128_160")
@@ -205,28 +209,11 @@ def build_widget_page(widget_id, page_title):
 
 
 def upsert_widget_page(config, widget_id, page_title):
-    updated = json.loads(json.dumps(config))
-    pages = updated.setdefault("pages", [])
-    replacement = build_widget_page(widget_id, page_title)
-
-    for index, page in enumerate(pages):
-        if page.get("title") == page_title or page_references_widget(page, widget_id):
-            pages[index] = replacement
-            return updated
-
-    pages.append(replacement)
-    return updated
+    return safe_upsert_widget_page(config, widget_id, page_title)
 
 
 def remove_widget_page_references(config, widget_id):
-    updated = json.loads(json.dumps(config))
-    pages = []
-    for page in updated.get("pages", []):
-        if page_references_widget(page, widget_id):
-            continue
-        pages.append(page)
-    updated["pages"] = pages
-    return updated
+    return safe_remove_widget_reference(config, widget_id, remove_empty_page=True)
 
 
 def page_references_widget(page, widget_id):
@@ -238,7 +225,14 @@ def page_references_widget(page, widget_id):
 
 def iter_app_files(app_dir):
     for path in sorted(app_dir.rglob("*")):
-        if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+        relative = path.relative_to(app_dir)
+        if (
+            path.is_symlink()
+            or any(part.startswith(".") for part in relative.parts)
+            or "__pycache__" in path.parts
+            or path.suffix in {".pyc", ".pyo", ".swp"}
+            or path.name.startswith(".env")
+        ):
             continue
         if path.name == "py.typed" or (path.is_file() and path.stat().st_size == 0):
             continue
@@ -307,6 +301,8 @@ def verify_app_installed(client, app_id):
 
 
 def run(args):
+    if not args.host:
+        raise ValueError("--host is required")
     app_dir = args.app.resolve()
     conf = load_app_conf(app_dir)
     app_id = conf["id"]

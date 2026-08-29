@@ -11,8 +11,9 @@ import sys
 import uuid
 from pathlib import Path
 
+from tools.dartsnut.pages import upsert_widget_page as safe_upsert_widget_page
 
-DEFAULT_HOST = "192.168.1.194"
+DEFAULT_HOST = ""
 DEFAULT_PORT = 9251
 DEFAULT_PATH = "/ws"
 DEFAULT_WIDGET = Path("widgets/codex_status_128_128")
@@ -199,17 +200,7 @@ def build_widget_page(widget_id, page_title):
 
 
 def upsert_widget_page(config, widget_id, page_title):
-    updated = json.loads(json.dumps(config))
-    pages = updated.setdefault("pages", [])
-    replacement = build_widget_page(widget_id, page_title)
-
-    for index, page in enumerate(pages):
-        if page.get("title") == page_title or page_references_widget(page, widget_id):
-            pages[index] = replacement
-            return updated
-
-    pages.append(replacement)
-    return updated
+    return safe_upsert_widget_page(config, widget_id, page_title)
 
 
 def page_references_widget(page, widget_id):
@@ -221,7 +212,14 @@ def page_references_widget(page, widget_id):
 
 def iter_widget_files(widget_dir):
     for path in sorted(widget_dir.rglob("*")):
-        if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+        relative = path.relative_to(widget_dir)
+        if (
+            path.is_symlink()
+            or any(part.startswith(".") for part in relative.parts)
+            or "__pycache__" in path.parts
+            or path.suffix in {".pyc", ".pyo", ".swp"}
+            or path.name.startswith(".env")
+        ):
             continue
         if path.is_file():
             yield path, path.relative_to(widget_dir)
@@ -288,6 +286,8 @@ def verify_app_installed(client, widget_id):
 
 
 def run(args):
+    if not args.host:
+        raise ValueError("--host is required")
     widget_dir = args.widget.resolve()
     conf = load_widget_conf(widget_dir)
     widget_id = conf["id"]
