@@ -1,6 +1,6 @@
 ## Summary
 
-- 
+- Describe the user-visible and maintainer-visible changes.
 
 ## Verification
 
