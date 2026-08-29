@@ -1,6 +1,7 @@
 import unittest
 
-from scripts.upload_app import DartsnutClient, upsert_widget_page
+from tools.dartsnut.board import DartsnutClient
+from tools.dartsnut.pages import upsert_widget_page
 
 
 class FakeWebSocket:

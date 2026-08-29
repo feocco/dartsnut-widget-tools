@@ -5,7 +5,11 @@ from pathlib import Path
 
 from tools.dartsnut.cli import parse_args
 from tools.dartsnut.manifest import ManifestError, load_manifest
-from tools.dartsnut.pages import PageConflictError, upsert_widget_page
+from tools.dartsnut.pages import (
+    PageConflictError,
+    remove_widget_reference,
+    upsert_widget_page,
+)
 
 
 class ManifestTests(unittest.TestCase):
@@ -88,6 +92,20 @@ include = ["conf.json", "main.py", "pyproject.toml"]
         with self.assertRaises(SystemExit):
             parse_args(["plan", "--app", "widgets/sample"])
 
+    def test_repository_manifests_load(self):
+        root = Path(__file__).resolve().parents[1]
+
+        widget = load_manifest(root / "widgets" / "codex_status_128_128")
+        game = load_manifest(root / "games" / "pixeldarts_chess_128_160")
+        game_files = [str(file.relative_path) for file in game.files]
+
+        self.assertEqual(widget.kind, "widget")
+        self.assertEqual(game.kind, "game")
+        self.assertNotIn("chess/__init__.py", game_files)
+        self.assertIn("game_state.py", game_files)
+        self.assertIn("fixtures/opening_menu.v1.json", game_files)
+        self.assertIn("fixtures/opening_positions.v1.json", game_files)
+
 
 class PageTests(unittest.TestCase):
     def test_title_collision_is_rejected(self):
@@ -103,6 +121,25 @@ class PageTests(unittest.TestCase):
 
         with self.assertRaisesRegex(PageConflictError, "already owned"):
             upsert_widget_page(config, "sample_widget", "Sample")
+
+    def test_cleanup_removes_only_requested_widget(self):
+        config = {
+            "pages": [
+                {
+                    "uuid": "shared",
+                    "title": "Shared",
+                    "widgets": [{"id": "stale"}, {"id": "clock"}],
+                }
+            ]
+        }
+
+        updated = remove_widget_reference(
+            config,
+            "stale",
+            remove_empty_page=True,
+        )
+
+        self.assertEqual(updated["pages"][0]["widgets"], [{"id": "clock"}])
 
 
 if __name__ == "__main__":
