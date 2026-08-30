@@ -110,9 +110,13 @@ include = ["conf.json", "main.py", "pyproject.toml"]
         self.assertEqual(widget.kind, "widget")
         self.assertEqual(game.kind, "game")
         self.assertNotIn("chess/__init__.py", game_files)
-        self.assertIn("game_state.py", game_files)
-        self.assertIn("fixtures/opening_menu.v1.json", game_files)
-        self.assertIn("fixtures/opening_positions.v1.json", game_files)
+        self.assertNotIn("chess_game.py", game_files)
+        self.assertNotIn("dartboard.py", game_files)
+        self.assertNotIn("game_state.py", game_files)
+        self.assertNotIn("openings.py", game_files)
+        self.assertIn("match.py", game_files)
+        self.assertIn("chess_logic/continuation.py", game_files)
+        self.assertIn("minigame/target_round.py", game_files)
 
 
 class PageTests(unittest.TestCase):

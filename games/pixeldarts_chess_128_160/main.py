@@ -2,12 +2,10 @@ import argparse
 import json
 import os
 import time
-from pathlib import Path
 
-from chess_game import PixelDartsChessRuntime
 from frame_pump import FramePump
-from game_state import ButtonPressed, DartHit
 from input_adapter import DartsnutInputAdapter
+from match import Match
 from pydartsnut import Dartsnut
 from rendering import Renderer
 
@@ -45,43 +43,37 @@ def log(message):
             pass
 
 
-def load_game_version():
-    try:
-        conf = json.loads(Path(__file__).with_name("conf.json").read_text(encoding="utf-8"))
-        return str(conf.get("version", ""))
-    except (OSError, json.JSONDecodeError):
-        return ""
-
-
 dartsnut = Dartsnut()
-game = PixelDartsChessRuntime(logger=log)
-renderer = Renderer(version=load_game_version())
-renderer.debug_overlay_enabled = DEBUG_OVERLAY
+game = Match(logger=log)
+game.debug_overlay_enabled = DEBUG_OVERLAY
+renderer = Renderer()
 input_adapter = DartsnutInputAdapter(dartsnut, logger=log)
 frame_pump = FramePump(dartsnut, renderer, game, logger=log)
 FRAME_SLEEP_SECONDS = float(PARAMS.get("frame_sleep_seconds", 0.005))
 
 
-def process_inputs(now):
+def process_inputs():
+    now = time.monotonic()
     for button in input_adapter.button_events():
-        if game.dispatch(ButtonPressed(button, now)):
+        if game.handle_button(button, now=now):
             frame_pump.mark_dirty()
     for x, y, color in input_adapter.hit_events():
-        if game.dispatch(DartHit(x, y, color, now)):
+        if game.handle_hit(x, y, color=color, now=now):
             frame_pump.mark_dirty()
 
 
 try:
     while dartsnut.running:
-        now = time.monotonic()
-        if game.tick(now):
+        if game.tick(time.monotonic()):
             frame_pump.mark_dirty()
-        process_inputs(now)
-        frame_pump.update(now)
+        process_inputs()
+        frame_pump.update(time.monotonic())
         time.sleep(FRAME_SLEEP_SECONDS)
 except KeyboardInterrupt:
     pass
 finally:
-    game.close()
+    close = getattr(game.evaluator, "close", None)
+    if close:
+        close()
 
 print("pixeldarts_chess_128_160 exiting...")

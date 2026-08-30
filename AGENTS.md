@@ -23,6 +23,14 @@ python3 -m mypy
 python3 -m py_compile scripts/*.py tools/dartsnut/*.py widgets/*/main.py games/pixeldarts_chess_128_160/*.py services/stockfish_evaluator/app.py
 ```
 
+Verify the three-round renderer after PixelDarts Chess changes:
+
+```bash
+python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
+  --feature three-round-match \
+  --out artifacts/verify-pixeldarts-chess/three-round-match
+```
+
 Use the app manifest as the upload allowlist. Never upload hidden files,
 environment files, virtual environments, caches, bytecode, editor files,
 symlinks, undeclared files, or vendored dependencies.

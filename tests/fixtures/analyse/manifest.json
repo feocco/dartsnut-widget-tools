@@ -1,0 +1,28 @@
+{
+  "required": [
+    "startpos_white_mpv8.json",
+    "startpos_black_mpv8.json",
+    "band_loss_0.json",
+    "band_loss_40.json",
+    "band_loss_100.json",
+    "band_loss_200.json",
+    "band_loss_350.json",
+    "closest_not_under.json",
+    "all_under_target.json",
+    "winner_pv1_mates.json",
+    "all_legal_mate.json",
+    "round4_mate_closest.json",
+    "fewer_than_eight.json",
+    "illegal_uci_mixed.json",
+    "terminal_stalemate.json",
+    "terminal_checkmate.json"
+  ],
+  "continuation_required": [
+    "six_ply_script.json",
+    "early_terminal_script.json",
+    "continuation_canned_six.json",
+    "continuation_canned_three_rounds.json",
+    "continuation_canned_short_terminal.json",
+    "continuation_canned_round4_mate.json"
+  ]
+}

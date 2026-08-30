@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -9,11 +10,11 @@ import chess.engine
 HOST = os.environ.get("SERVICE_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SERVICE_PORT", "8096"))
 STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "/usr/games/stockfish")
-DEFAULT_DEPTH = int(os.environ.get("STOCKFISH_DEPTH", "8"))
-DEFAULT_MOVETIME_MS = int(os.environ.get("STOCKFISH_MOVETIME_MS", "80"))
+DEFAULT_DEPTH = int(os.environ.get("STOCKFISH_DEPTH", "10"))
+DEFAULT_MOVETIME_MS = int(os.environ.get("STOCKFISH_MOVETIME_MS", "120"))
 
 
-class StockfishRanker:
+class StockfishAnalyser:
     def __init__(self, path=STOCKFISH_PATH):
         self.path = path
         self.engine = None
@@ -32,43 +33,54 @@ class StockfishRanker:
         self.start()
         return True
 
-    def rank(self, fen, depth=DEFAULT_DEPTH, movetime_ms=DEFAULT_MOVETIME_MS):
+    def analyse(self, fen, depth=DEFAULT_DEPTH, movetime_ms=DEFAULT_MOVETIME_MS, multipv=1):
         self.start()
         board = chess.Board(fen)
         active_color = board.turn
-        ranked = []
+        requested = max(1, min(int(multipv), len(list(board.legal_moves))))
         with self.lock:
-            root_info = self.engine.analyse(
+            infos = self.engine.analyse(
                 board,
                 chess.engine.Limit(depth=int(depth), time=max(1, int(movetime_ms)) / 1000),
+                multipv=requested,
             )
-            root_score = root_info["score"].pov(chess.WHITE)
-            for move in board.legal_moves:
-                san = board.san(move)
-                board.push(move)
-                try:
-                    info = self.engine.analyse(
-                        board,
-                        chess.engine.Limit(depth=int(depth), time=max(1, int(movetime_ms)) / 1000),
-                    )
-                    score = info["score"].pov(active_color)
-                    ranked.append(
-                        {
-                            "uci": move.uci(),
-                            "san": san,
-                            "score_cp": score.score(mate_score=100000),
-                            "mate": score.mate(),
-                        }
-                    )
-                finally:
-                    board.pop()
-        ranked.sort(key=lambda item: int(item["score_cp"]), reverse=True)
-        for index, item in enumerate(ranked, start=1):
-            item["rank"] = index
-        return ranked, root_score
+        if not isinstance(infos, list):
+            infos = [infos]
+        pvs = []
+        for index, info in enumerate(infos, start=1):
+            pv = info.get("pv") or []
+            if not pv:
+                continue
+            move = pv[0]
+            score = info["score"].pov(active_color)
+            pvs.append(
+                {
+                    "multipv": index,
+                    "uci": move.uci(),
+                    "san": board.san(move),
+                    "score_cp_stm": score.score(mate_score=100000),
+                    "mate": score.mate(),
+                    "white_expectation": info["score"].pov(chess.WHITE).wdl(model="sf").expectation(),
+                }
+            )
+        if not pvs:
+            return {"fen": fen, "multipv": int(multipv), "root_score_cp": 0, "white_expectation": 0.5, "pvs": []}
+        best = infos[0]["score"].pov(chess.WHITE)
+        return {
+            "fen": fen,
+            "multipv": int(multipv),
+            "root_score_cp": best.score(mate_score=100000),
+            "white_expectation": best.wdl(model="sf").expectation(),
+            "pvs": pvs,
+        }
 
 
-ranker = StockfishRanker()
+analyser = StockfishAnalyser()
+
+
+def configure_logging():
+    level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
+    logging.basicConfig(level=level, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -77,31 +89,28 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "not found"}, status=404)
             return
         try:
-            ranker.health()
+            analyser.health()
             self.send_json({"ok": True, "engine": "stockfish"})
         except Exception as exc:
             self.send_json({"ok": False, "error": str(exc)}, status=503)
 
     def do_POST(self):
-        if self.path != "/rank":
+        if self.path != "/analyse":
             self.send_json({"error": "not found"}, status=404)
             return
         try:
             payload = self.read_json()
             fen = payload["fen"]
-            moves, root_score = ranker.rank(
+            multipv = int(payload.get("multipv", 1))
+            if multipv < 1:
+                raise ValueError("multipv must be at least 1")
+            result = analyser.analyse(
                 fen,
                 depth=payload.get("depth", DEFAULT_DEPTH),
                 movetime_ms=payload.get("movetime_ms", DEFAULT_MOVETIME_MS),
+                multipv=multipv,
             )
-            self.send_json(
-                {
-                    "fen": fen,
-                    "root_score_cp": root_score.score(mate_score=100000),
-                    "white_expectation": root_score.wdl(model="sf").expectation(),
-                    "moves": moves,
-                }
-            )
+            self.send_json(result)
         except KeyError as exc:
             self.send_json({"error": f"missing field: {exc.args[0]}"}, status=400)
         except ValueError as exc:
@@ -128,12 +137,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    configure_logging()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"stockfish-evaluator listening on {HOST}:{PORT}")
     try:
         server.serve_forever()
     finally:
-        ranker.close()
+        analyser.close()
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ __pycache__/
 .superpowers/
 .venv/
 capture/
+artifacts/
 .preview/
 dartsnut_emulator/
 *.egg-info/
