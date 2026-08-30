@@ -95,7 +95,7 @@ wheels = [
 
 [[package]]
 name = "pixeldarts-chess-128-160"
-version = "0.4.2"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "chess" },

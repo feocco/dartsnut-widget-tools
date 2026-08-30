@@ -34,9 +34,8 @@ the current checkout.
 
 Goals 0 through 4 run without a Stockfish process. Tests unset
 `STOCKFISH_API_URL`, inject fixture-backed analysers, and never contact the LAN.
-Goal 5 runs on a worker that can reach the evaluator currently documented as
-`http://192.168.1.43:8096`. Runtime Compose configuration is owned by
-`feocco/homelab-config`.
+Goal 5 runs on a worker that can reach the configured evaluator.
+Runtime Compose configuration is owned by `feocco/homelab-config`.
 
 The repository removes `POST /rank` as soon as callers migrate to
 `POST /analyse`. There is no compatibility endpoint. Goal 5 separately proves

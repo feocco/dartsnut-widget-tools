@@ -5,9 +5,11 @@ description: Verify PixelDarts Chess on the 128x160 emulator and the headless hi
 
 # Verify PixelDarts Chess
 
-Primary surface: a 128x160 PixelDart game. Players throw at the panel (emulator mouse click, or a real dart on `192.168.1.250`). Buttons are A (`K` in the emulator) and B (`L`).
+Primary surface: a 128x160 PixelDart game. Players throw at the panel (emulator
+mouse click, or a real dart on the configured board). Buttons are A (`K` in the
+emulator) and B (`L`).
 
-Secondary surfaces are `scripts/upload_app.py` over `ws://<host>:9251/ws` and
+Secondary surfaces are `python3 -m tools.dartsnut` over `ws://<host>:9251/ws` and
 `POST /analyse` on the Stockfish evaluator. Those are not the user game. Do not
 treat a passing upload or evaluator response as proof that a round works.
 
@@ -36,7 +38,7 @@ README for a full GUI-emulator pass. For routine Cloud verification, use the
 process-level shared-memory recorder documented below; it runs the same
 `pydartsnut` boundary without cloning the emulator repository.
 
-Do not upload to `192.168.1.250` unless the user asks for a hardware pass.
+Do not upload to a physical board unless the user asks for a hardware pass.
 
 ## Doctor
 
