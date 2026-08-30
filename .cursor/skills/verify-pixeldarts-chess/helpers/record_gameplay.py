@@ -55,6 +55,7 @@ class Host:
         self.frames = 0
         self.timeline: list[float] = []
         self.last_frame: bytes | None = None
+        self.next_dart_slot = 0
         self.started = time.monotonic()
         out.mkdir(parents=True, exist_ok=True)
         for stale in out.glob("*.png"):
@@ -101,9 +102,11 @@ class Host:
         raise RuntimeError(f"button {button} produced no new frame")
 
     def throw(self, x: int, y: int) -> None:
+        slot = self.next_dart_slot
+        self.next_dart_slot = (self.next_dart_slot + 1) % 12
         for _ in range(3):
             before = self.frames
-            self.set_dart(x, y)
+            self.set_dart(x, y, slot=slot)
             self.pump(0.75)
             self.clear_darts()
             self.pump(max(DART_UNBLOCK_SECONDS, 0.40))
