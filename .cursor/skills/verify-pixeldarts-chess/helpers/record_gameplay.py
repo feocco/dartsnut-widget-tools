@@ -75,7 +75,7 @@ class Host:
 
     def pump(self, seconds: float) -> None:
         deadline = time.monotonic() + seconds
-        while time.monotonic() < deadline:
+        while True:
             if self.pdi.buf[0] == 0:
                 data = bytes(self.pdi.buf[1 : FRAME_BYTES + 1])
                 if data != self.last_frame:
@@ -84,7 +84,10 @@ class Host:
                     self.last_frame = data
                     self.frames += 1
                 self.pdi.buf[0] = 1
-            time.sleep(0.004)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(0.004, remaining))
 
     def press(self, button: str = "a") -> None:
         for _ in range(3):
