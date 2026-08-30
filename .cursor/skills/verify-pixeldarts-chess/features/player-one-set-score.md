@@ -21,13 +21,14 @@ Player one throws three darts at a 3x3 grid of shared values. Hits add the print
 Preconditions:
 
 - `implementation` is `head-to-head`.
-- Scene is `shooting`, active player is player one.
+- Scene is `targets`, active player is the round's first chess color.
 - Known seed if the helper exposes `--seed` so expected values are deterministic.
 
-- **Read the grid.** Render `10_before.png`. Record the nine values and centers from the game, not from OCR guesswork if the object has them.
+- **Read the grid.** Render `10_player_one_start.png`. Record the nine values and centers from the game object.
 - **Hit a high value.** `handle_hit(cx, cy)` on a non-bull target center. Score increases by that value. Cell is empty. Frame `11_after_hit.png`.
 - **Miss.** `handle_hit(64, 140)` in the strip. Score unchanged. Darts remaining drop by one.
-- **Finish the turn.** Two more playfield hits or misses until darts are 0. Scene is waiting for player two or an explicit "P1 done" hold. Final P1 score is in the strip and in `summary.json`.
+- **Finish the turn.** Two more hits or misses until darts are 0. Scene is
+  `turn_intro` for the chase color. Final score is in `summary.json`.
 - **Proof.** Log every hit coordinate and delta. Screenshot before first hit and after the last.
 
 ## Gotchas
@@ -35,4 +36,3 @@ Preconditions:
 - Hitting a cell that already scored is 0, not a redirect to a neighbor.
 - Bull is smaller (19px). A near-center miss is still a miss.
 - Do not rotate or reshuffle the grid after a hit. Placement stays put until player two's reset-to-same-layout.
-- Dartboard-beta wedge hits are a different game. Refuse this feature there.

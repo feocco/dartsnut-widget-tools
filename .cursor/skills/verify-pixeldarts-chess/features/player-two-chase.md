@@ -21,9 +21,10 @@ Preconditions:
 
 - `implementation` is `head-to-head`.
 - Player one has a finished score `S`.
-- Scene is player-two `shooting`.
+- Scene is `targets` with the chase color active.
 
-- **Confirm restore.** Render `20_p2_start.png`. The eight numbers and bull match player one's opening grid. Strip contains `BEAT` and `S`.
+- **Confirm restore.** Render `20_chase_hud.png`. The eight numbers and bull match
+  the first shooter's opening grid. Strip contains `BEAT` and `S`.
 - **Need line.** `NEED` equals `S + 1` minus current P2 score, floored at 0 once P2 is strictly ahead. No extra glow on a single target.
 - **Hit.** Score one target. `NEED` updates. Frame `21_after_p2_hit.png`.
 - **Proof.** `summary.json` includes `p1_score`, `p2_score`, `beat`, `need`, and `layout_p1 == layout_p2`.

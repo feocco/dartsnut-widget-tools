@@ -65,10 +65,8 @@ Player two sees:
 - the additional points needed;
 - darts remaining.
 
-The mockup highlights the cheapest remaining target that would take player two
-past the chase score. That hint is not locked. It makes the pressure state easy
-to read, but it also plays part of the game for the second shooter. My
-preference is to show `NEED 11` without highlighting the 12-point target.
+The chase HUD shows `BEAT` and `NEED` without highlighting a cheapest winning
+target. The pressure readout must not solve the aiming decision.
 
 Alternate the first player every round. Showing the chase gives player two an
 advantage, and alternating order makes that advantage part of the match rather
@@ -234,17 +232,17 @@ a generated raster. Kenney is the right starting asset for this version.
 - Restore the exact same seeded grid for player two.
 - Show player two the score to beat and points needed.
 - Alternate who shoots first each round.
-- A match plays at least three full rounds before the late-match mechanic unlocks.
+- A match plays three full rounds before checkmate unlocks for round 4.
 - Resolve ties with one-dart sudden death.
 - Compete for three full chess moves, six plies.
 - Show the actual engine percentage after selecting the legal line.
+- A registered hit scores even if the dart later bounces out.
+- Show `CHECKMATE UNLOCKED` after round 3 animation.
 - Keep minigame, chess continuation, animation, and coordination separate.
 
-## Still open before implementation planning
+## Tuning after implementation
 
-- Whether player two gets a visual hint for the cheapest winning target.
 - Whether the bull should remain 25 or move to 50.
-- Whether a registered bounce-out still counts.
 - How long the result and six-ply animation should take.
 
 The largest design risk is repetition. With equal-size normal targets, players

@@ -62,7 +62,7 @@ It checks:
 - Which coordinator is importable: `match.Match` (head-to-head) or `chess_game.PixelDartsChessGame` (dartboard beta).
 - Whether `minigame` exists without importing `chess`.
 
-`implementation` is `head-to-head` or `dartboard-beta`. Feature files say which value they need.
+`implementation` must be `head-to-head`.
 
 ## Drive
 
@@ -76,7 +76,7 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
 
 Feature ids match the map files: `start-match`, `player-one-set-score`, `player-two-chase`, `continuation-and-animation`, `three-round-match`, `sudden-death`.
 
-The helper refuses a feature whose required implementation is not present. That refusal is not a pass.
+The helper exits nonzero when a driven feature does not reach its required state.
 
 Emulator drive, when a display is available:
 

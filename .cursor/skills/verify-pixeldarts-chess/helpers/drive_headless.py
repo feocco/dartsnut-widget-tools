@@ -155,8 +155,11 @@ def drive_player_one(out):
 def drive_player_two(out):
     game = make_game()
     renderer = Renderer()
+    enter_targets(game)
+    layout_p1 = [cell.value for cell in game.target_round.cells]
     score_first_player(game)
     enter_targets(game)
+    layout_p2 = [cell.value for cell in game.target_round.cells]
     save_frame(renderer, game, out, "20_chase_hud.png")
     need = game.points_needed
     miss_chase(game)
@@ -165,8 +168,12 @@ def drive_player_two(out):
         "feature": "player-two-chase",
         "implementation": "head-to-head",
         "passed": need > 0 and game.scene == "round_result",
+        "p1_score": game.round_result.scores["white"],
+        "p2_score": game.round_result.scores["black"],
         "beat": game.score_to_beat,
         "need": need,
+        "layout_p1": layout_p1,
+        "layout_p2": layout_p2,
     }
 
 
