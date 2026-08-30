@@ -27,6 +27,15 @@ class BoardEvaluation:
     white_expectation: float
 
 
+@dataclass(frozen=True)
+class AnalysisCandidate:
+    move: object
+    san: str
+    score_cp_stm: int
+    mate: int | None
+    white_expectation: float
+
+
 def require_chess():
     if chess is None:
         raise RuntimeError(
@@ -46,7 +55,7 @@ class HttpStockfishEvaluator:
     def available(self):
         return bool(self.base_url)
 
-    def analyze(self, board):
+    def analyse_multipv(self, board, multipv=1):
         if not self.base_url:
             raise RuntimeError("STOCKFISH_API_URL is not configured")
 
@@ -54,9 +63,10 @@ class HttpStockfishEvaluator:
             "fen": board.fen(),
             "depth": self.depth,
             "movetime_ms": self.movetime_ms,
+            "multipv": int(multipv),
         }
         request = urllib.request.Request(
-            f"{self.base_url}/rank",
+            f"{self.base_url}/analyse",
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -67,26 +77,33 @@ class HttpStockfishEvaluator:
         except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"Stockfish HTTP evaluator failed: {exc}") from exc
 
-        ranked = []
+        candidates = []
         legal = {move.uci(): move for move in board.legal_moves}
-        for item in data.get("moves", []):
+        for item in data.get("pvs", []):
             move = legal.get(item.get("uci"))
             if move is None:
                 continue
-            ranked.append(MoveScore(move, int(item.get("score_cp", 0))))
+            candidates.append(
+                AnalysisCandidate(
+                    move=move,
+                    san=str(item.get("san") or board.san(move)),
+                    score_cp_stm=int(item.get("score_cp_stm", 0)),
+                    mate=item.get("mate"),
+                    white_expectation=float(item.get("white_expectation", data.get("white_expectation", 0.5))),
+                )
+            )
 
-        if not ranked:
+        if not candidates:
             raise RuntimeError("Stockfish HTTP evaluator returned no legal moves")
-        ranked.sort(key=lambda item: item.score, reverse=True)
-        evaluation = BoardEvaluation(
-            score_cp=int(data.get("root_score_cp", 0)),
-            white_expectation=float(data.get("white_expectation", 0.5)),
-        )
-        return ranked, evaluation
+        return candidates
 
-    def rank_moves(self, board):
-        ranked, _ = self.analyze(board)
-        return ranked
+    def analyze(self, board):
+        candidates = self.analyse_multipv(board, multipv=8)
+        ranked = [MoveScore(candidate.move, candidate.score_cp_stm) for candidate in candidates]
+        return ranked, BoardEvaluation(
+            score_cp=ranked[0].score,
+            white_expectation=candidates[0].white_expectation,
+        )
 
 
 class StockfishEvaluator:
@@ -118,6 +135,36 @@ class StockfishEvaluator:
 
     def analyze(self, board):
         return self.rank_moves(board), self.evaluate_board(board)
+
+    def analyse_multipv(self, board, multipv=1):
+        if self._engine is None:
+            self._engine = chess.engine.SimpleEngine.popen_uci(self.path)
+        active_color = board.turn
+        infos = self._engine.analyse(
+            board,
+            chess.engine.Limit(depth=self.depth, time=self.time_limit),
+            multipv=max(1, min(int(multipv), len(list(board.legal_moves)))),
+        )
+        if not isinstance(infos, list):
+            infos = [infos]
+        candidates = []
+        for info in infos:
+            pv = info.get("pv") or []
+            if not pv:
+                continue
+            move = pv[0]
+            stm_score = info["score"].pov(active_color)
+            white_score = info["score"].pov(chess.WHITE)
+            candidates.append(
+                AnalysisCandidate(
+                    move=move,
+                    san=board.san(move),
+                    score_cp_stm=int(stm_score.score(mate_score=100000)),
+                    mate=stm_score.mate(),
+                    white_expectation=float(white_score.wdl(model="sf").expectation()),
+                )
+            )
+        return candidates
 
     def evaluate_board(self, board):
         if self._engine is None:
@@ -168,6 +215,19 @@ class StaticMaterialEvaluator:
     def analyze(self, board):
         return self.rank_moves(board), self.evaluate_board(board)
 
+    def analyse_multipv(self, board, multipv=1):
+        evaluation = self.evaluate_board(board)
+        return [
+            AnalysisCandidate(
+                move=item.move,
+                san=board.san(item.move),
+                score_cp_stm=item.score,
+                mate=None,
+                white_expectation=evaluation.white_expectation,
+            )
+            for item in self.rank_moves(board)[: int(multipv)]
+        ]
+
     def evaluate_board(self, board):
         score = self.material_score(board, chess.WHITE)
         return BoardEvaluation(score, cp_to_expectation(score))
@@ -217,6 +277,16 @@ class FallbackEvaluator:
                 if analyzer:
                     return analyzer(board)
                 return evaluator.rank_moves(board), evaluator.evaluate_board(board)
+            except Exception as exc:
+                self.last_error = str(exc)
+        raise RuntimeError(self.last_error or "No evaluator available")
+
+    def analyse_multipv(self, board, multipv=1):
+        for evaluator in self.evaluators:
+            try:
+                analyser = getattr(evaluator, "analyse_multipv", None)
+                if analyser:
+                    return analyser(board, multipv)
             except Exception as exc:
                 self.last_error = str(exc)
         raise RuntimeError(self.last_error or "No evaluator available")

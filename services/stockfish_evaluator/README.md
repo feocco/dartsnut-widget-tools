@@ -27,9 +27,9 @@ Starts Stockfish if needed and returns service health:
 {"ok": true, "engine": "stockfish"}
 ```
 
-### `POST /rank`
+### `POST /analyse`
 
-Ranks every legal move from the submitted board position.
+Returns the top requested principal-variation heads from one shared search.
 
 Request body:
 
@@ -37,7 +37,8 @@ Request body:
 {
   "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
   "depth": 8,
-  "movetime_ms": 80
+  "movetime_ms": 80,
+  "multipv": 8
 }
 ```
 
@@ -49,16 +50,18 @@ Fields:
 - `depth` is optional. It overrides `STOCKFISH_DEPTH` for this request.
 - `movetime_ms` is optional. It overrides `STOCKFISH_MOVETIME_MS` for this
   request.
+- `multipv` is optional and defaults to `1`.
 
 Example:
 
 ```bash
-curl -s http://localhost:8096/rank \
+curl -s http://localhost:8096/analyse \
   -H 'Content-Type: application/json' \
   -d '{
     "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     "depth": 8,
-    "movetime_ms": 80
+    "movetime_ms": 80,
+    "multipv": 8
   }'
 ```
 
@@ -69,22 +72,26 @@ Response body:
   "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
   "root_score_cp": 31,
   "white_expectation": 0.53,
-  "moves": [
+  "multipv": 8,
+  "pvs": [
     {
+      "multipv": 1,
       "uci": "e2e4",
       "san": "e4",
-      "score_cp": 38,
+      "score_cp_stm": 38,
       "mate": null,
-      "rank": 1
+      "white_expectation": 0.54
     }
   ]
 }
 ```
 
-`score_cp` is from the active player's perspective after that move is made, so
+`score_cp_stm` is from the active player's perspective, so
 higher means better for the player whose turn it was in the submitted FEN.
 `root_score_cp` and `white_expectation` describe the submitted position from
-White's perspective and drive the PixelDarts Chess win-probability bar.
+White's perspective. Each PV also includes its resulting White expectation.
+The endpoint performs one `engine.analyse(..., multipv=N)` call, not one search
+per legal move.
 
 ## Depth And Difficulty
 

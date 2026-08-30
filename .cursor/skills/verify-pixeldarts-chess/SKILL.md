@@ -7,7 +7,9 @@ description: Verify PixelDarts Chess on the 128x160 emulator and the headless hi
 
 Primary surface: a 128x160 PixelDart game. Players throw at the panel (emulator mouse click, or a real dart on `192.168.1.250`). Buttons are A (`K` in the emulator) and B (`L`).
 
-Secondary surfaces: `scripts/upload_app.py` over `ws://<host>:9251/ws`, and `POST /rank` on the Stockfish evaluator. Those are not the user game. Do not treat a passing upload or a `/rank` 200 as proof that a round works.
+Secondary surfaces are `scripts/upload_app.py` over `ws://<host>:9251/ws` and
+`POST /analyse` on the Stockfish evaluator. Those are not the user game. Do not
+treat a passing upload or evaluator response as proof that a round works.
 
 This skill is the definition of done for the head-to-head target round in `docs/design/head-to-head-target-round.md`. The current checkout still ships dartboard-wedge chess. Doctor reports which build is present. Drive a mapped feature only if its preconditions match that report. Do not call the old opening-band / wedge-target path a pass for a new-round feature.
 

@@ -31,7 +31,9 @@ Preconditions:
 ## Gotchas
 
 - Three full moves means six plies. A three-ply line is a fail.
-- A hanging-queen joke line that blows past the quality floor is a fail even if the margin is large.
-- Do not pass this feature by calling `POST /rank` yourself and pasting the PV into the game.
+- Each loser ply must use the configured 0/40/100/200/350cp MultiPV loss
+  target, with the documented nearest-loss and all-under fallback.
+- Do not pass this feature by calling `POST /analyse` yourself and pasting the
+  PV into the game.
 - Tie scores must not enter this feature; use [sudden death](./sudden-death.md).
 - One successful continuation is not a match. [Three-round match](./three-round-match.md) is the full happy path.

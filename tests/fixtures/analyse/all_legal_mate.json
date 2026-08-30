@@ -1,0 +1,1 @@
+{"fen":"6k1/5Q2/6K1/8/8/8/8/8 w - - 0 1","multipv":8,"root_score_cp":100000,"white_expectation":1.0,"pvs":[{"multipv":1,"uci":"f7g7","san":"Qg7#","score_cp_stm":100000,"mate":1,"white_expectation":1.0},{"multipv":2,"uci":"f7h7","san":"Qh7+","score_cp_stm":99999,"mate":2,"white_expectation":1.0}]}

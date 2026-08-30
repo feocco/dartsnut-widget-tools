@@ -1,0 +1,1 @@
+{"starting_fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","final_fen":"r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4","moves_uci":["e2e4","e7e5","g1f3","b8c6","f1b5","a7a6"],"moves_san":["e4","e5","Nf3","Nc6","Bb5","a6"],"before_wdl":0.53,"after_wdl":0.515,"loss_target_cp":100,"ply_trace":[]}
