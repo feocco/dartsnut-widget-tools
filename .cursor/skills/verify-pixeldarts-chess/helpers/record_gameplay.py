@@ -75,8 +75,8 @@ class Host:
         self.pdo.buf[base + 3] = (raw_y >> 8) & 0xFF
 
     def pump(self, seconds: float) -> None:
-        deadline = time.monotonic() + seconds
-        while True:
+        iterations = max(1, round(seconds / 0.004))
+        for _ in range(iterations):
             if self.pdi.buf[0] == 0:
                 data = bytes(self.pdi.buf[1 : FRAME_BYTES + 1])
                 if data != self.last_frame:
@@ -85,10 +85,7 @@ class Host:
                     self.last_frame = data
                     self.frames += 1
                 self.pdi.buf[0] = 1
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            time.sleep(min(0.004, remaining))
+            time.sleep(0.004)
 
     def press(self, button: str = "a") -> None:
         for _ in range(3):
