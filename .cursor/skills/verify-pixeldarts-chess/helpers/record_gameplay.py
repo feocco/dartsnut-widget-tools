@@ -130,12 +130,10 @@ class Host:
 
 
 def play_round(host: Host, scoring_cells) -> None:
-    host.pump(0.3)
-    host.press("a")
+    host.pump(2.0)
     for index in scoring_cells:
         host.throw(*GRID[index])
-    host.pump(0.3)
-    host.press("a")
+    host.pump(2.0)
     for _ in range(3):
         host.throw(*STRIP_MISS)
     host.pump(1.2)
