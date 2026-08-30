@@ -10,8 +10,8 @@ import chess.engine
 HOST = os.environ.get("SERVICE_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SERVICE_PORT", "8096"))
 STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "/usr/games/stockfish")
-DEFAULT_DEPTH = int(os.environ.get("STOCKFISH_DEPTH", "8"))
-DEFAULT_MOVETIME_MS = int(os.environ.get("STOCKFISH_MOVETIME_MS", "80"))
+DEFAULT_DEPTH = int(os.environ.get("STOCKFISH_DEPTH", "10"))
+DEFAULT_MOVETIME_MS = int(os.environ.get("STOCKFISH_MOVETIME_MS", "120"))
 
 
 class StockfishAnalyser:

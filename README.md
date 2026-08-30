@@ -100,8 +100,8 @@ curl -s http://127.0.0.1:8096/analyse \
   -H 'Content-Type: application/json' \
   -d '{
     "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    "depth": 8,
-    "movetime_ms": 80,
+    "depth": 10,
+    "movetime_ms": 120,
     "multipv": 8
   }'
 ```
@@ -110,7 +110,8 @@ The response includes ordered PV heads with `uci`, `san`, `score_cp_stm`,
 `mate`, and White expectation. `root_score_cp` and `white_expectation` describe
 the submitted position from White's perspective.
 
-The default `depth=8` is an arcade-speed analysis setting, not an Elo setting.
+The default `depth=10` and `movetime_ms=120` are arcade-speed analysis settings,
+not Elo settings.
 It is intended to distinguish good moves from obvious mistakes quickly for
 casual play. See [services/stockfish_evaluator/README.md](services/stockfish_evaluator/README.md)
 for the full API contract and tuning notes.

@@ -45,7 +45,7 @@ def require_chess():
 
 
 class HttpStockfishEvaluator:
-    def __init__(self, base_url=None, depth=8, movetime_ms=80, timeout=1.5):
+    def __init__(self, base_url=None, depth=10, movetime_ms=120, timeout=1.5):
         require_chess()
         self.base_url = (base_url or os.environ.get("STOCKFISH_API_URL", "")).rstrip("/")
         self.depth = depth
@@ -107,7 +107,7 @@ class HttpStockfishEvaluator:
 
 
 class StockfishEvaluator:
-    def __init__(self, path=None, depth=8, time_limit=0.08):
+    def __init__(self, path=None, depth=10, time_limit=0.12):
         require_chess()
         self.path = path or os.environ.get("STOCKFISH_PATH", "stockfish")
         self.depth = depth

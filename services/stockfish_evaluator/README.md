@@ -14,8 +14,8 @@ Environment variables:
 - `SERVICE_HOST`: bind address, default `0.0.0.0`.
 - `SERVICE_PORT`: HTTP port, default `8096`.
 - `STOCKFISH_PATH`: Stockfish binary path, default `/usr/games/stockfish`.
-- `STOCKFISH_DEPTH`: default search depth, default `8`.
-- `STOCKFISH_MOVETIME_MS`: default per-position time cap, default `80`.
+- `STOCKFISH_DEPTH`: default search depth, default `10`.
+- `STOCKFISH_MOVETIME_MS`: default per-position time cap, default `120`.
 
 ## Endpoints
 
@@ -36,8 +36,8 @@ Request body:
 ```json
 {
   "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-  "depth": 8,
-  "movetime_ms": 80,
+  "depth": 10,
+  "movetime_ms": 120,
   "multipv": 8
 }
 ```
@@ -59,8 +59,8 @@ curl -s http://localhost:8096/analyse \
   -H 'Content-Type: application/json' \
   -d '{
     "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    "depth": 8,
-    "movetime_ms": 80,
+    "depth": 10,
+    "movetime_ms": 120,
     "multipv": 8
   }'
 ```
@@ -100,7 +100,7 @@ half-moves Stockfish is allowed to look ahead. `movetime_ms` is also enforced,
 so very busy positions may stop because the time limit is reached before the
 requested depth is fully searched.
 
-The default `depth=8` and `movetime_ms=80` are chosen for arcade responsiveness,
+The default `depth=10` and `movetime_ms=120` are chosen for arcade responsiveness,
 not master-level analysis. They are strong enough to catch obvious blunders,
 captures, checks, and many short tactics for casual players, while keeping a
 full legal-move ranking fast enough for a dart game. For this game, that is a
