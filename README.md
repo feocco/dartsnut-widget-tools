@@ -70,6 +70,8 @@ fixtures, so it does not confuse fallback output with live Stockfish evidence.
 - A tie enters repeatable one-dart sudden death on a new shared grid.
 - The score margin selects a 0/40/100/200/350cp loss band.
 - The continuation planner performs one MultiPV search per ply, up to six.
+- After the sixth ply, the final board remains on screen until a player presses
+  A to begin the next round.
 - The chess position persists and first shooter alternates by color.
 - Checkmate is filtered in rounds 1–3. `CHECKMATE UNLOCKED` appears before
   round 4, where mate candidates become legal.

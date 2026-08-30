@@ -25,6 +25,9 @@ Preconditions:
 - **Result.** Scene `round_result` (or equivalent). Frame `30_result.png` shows P1 and P2 totals and a winner. No chess move is required from the user.
 - **Thinking.** Scene may be `thinking` while a line is chosen. Do not inject UCI.
 - **Animation.** Scene `move_animation` or a sequence of board frames. `summary.json` lists `moves_san` length 6 (or 6 ply). Replaying those moves from the start FEN is legal.
+- **Rest.** After the final ply, scene is `board_hold`. The final position and
+  evaluator bar remain visible indefinitely with `A NEXT`; only button A may
+  begin the next round.
 - **Eval.** Before and after percents in the strip or result copy come from the evaluator. After percent is not a linear map of the dart margin.
 - **Proof.** Frames for result and at least one mid-animation ply. `summary.json` has `start_fen`, `moves_uci`, `before_wdl`, `after_wdl`.
 

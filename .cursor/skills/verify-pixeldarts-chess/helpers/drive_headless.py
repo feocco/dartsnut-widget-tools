@@ -107,7 +107,9 @@ def complete_round(game, renderer, out, number):
     save_frame(renderer, game, out, f"r{number}_board.png")
     end_fen = game.board.fen()
     moves_uci = list(game.continuation.moves_uci)
-    game.tick(game.scene_started + game.BOARD_HOLD_SECONDS + 0.01)
+    if game.tick(game.scene_started + 3600):
+        raise AssertionError("board hold advanced without button A")
+    game.handle_button("a", game.scene_started + 3601)
     return {
         "round": number,
         "first_shooter": first,

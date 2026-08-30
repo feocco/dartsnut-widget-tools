@@ -78,6 +78,8 @@ Feature ids match the map files: `start-match`, `player-one-set-score`, `player-
 
 The helper exits nonzero when a driven feature does not reach its required state.
 
+## Verifying live Stockfish
+
 Live Stockfish uses a separate helper because fixture-backed drives must remain deterministic:
 
 ```bash
@@ -86,6 +88,28 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py 
   --container stockfish-evaluator \
   --out artifacts/goal-5-stockfish
 ```
+
+## Recording real gameplay
+
+`drive_headless.py` calls the game object in-process, so it cannot catch faults in
+`main.py`, the frame pump, or the evaluator chain. `record_gameplay.py` runs the
+shipped game as its own process over pydartsnut shared memory and captures its
+framebuffer, which is the closest surface to hardware available without a desktop.
+
+It needs an interpreter with `pydartsnut` and `chess` installed:
+
+```bash
+python3 -m venv /tmp/dartsnut && /tmp/dartsnut/bin/pip install pydartsnut==1.2.1 chess Pillow
+python3 .cursor/skills/verify-pixeldarts-chess/helpers/record_gameplay.py \
+  --python /tmp/dartsnut/bin/python \
+  --out artifacts/verify-pixeldarts-chess/gameplay
+ffmpeg -y -f concat -safe 0 -i artifacts/verify-pixeldarts-chess/gameplay/concat.txt \
+  -vf "scale=384:480:flags=neighbor,fps=30" -c:v libx264 -pix_fmt yuv420p gameplay.mp4
+```
+
+It passes only when the game never raises, reaches `checkmate_unlocked`, and plays a
+continuation per round. Install a Stockfish binary first if you want the recording to
+show real engine continuations rather than the material fallback.
 
 Emulator drive, when a display is available:
 

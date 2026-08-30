@@ -84,7 +84,7 @@ class MatchTests(unittest.TestCase):
             now = game.scene_started + game.PLY_SECONDS + 0.01
             game.tick(now)
         self.assertEqual(game.phase, MatchPhase.BOARD_HOLD)
-        game.tick(game.scene_started + game.BOARD_HOLD_SECONDS + 0.01)
+        game.handle_button("a", now)
         return now
 
     def test_three_rounds_chain_fens_seeds_and_alternate_first_color(self):
@@ -164,6 +164,27 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(game.board.fen(), game.continuation.final_fen)
         self.assertEqual(game.phase, MatchPhase.BOARD_HOLD)
 
+    def test_board_hold_waits_indefinitely_for_a(self):
+        game = self.play_canned("continuation_canned_six.json")
+        board_fen = game.board.fen()
+        round_number = game.round_number
+
+        self.assertFalse(game.tick(game.scene_started + 3600))
+        self.assertEqual(game.phase, MatchPhase.BOARD_HOLD)
+        self.assertEqual(game.board.fen(), board_fen)
+        self.assertEqual(game.round_number, round_number)
+
+        self.assertTrue(game.handle_button("a", game.scene_started + 3601))
+        self.assertEqual(game.phase, MatchPhase.TURN_INTRO)
+        self.assertEqual(game.round_number, round_number + 1)
+
+    def test_board_hold_strip_prompts_a_next(self):
+        game = self.play_canned("continuation_canned_six.json")
+        renderer = Renderer()
+
+        self.assertEqual(renderer.board_rows(game)[-1][0], "A NEXT")
+        self.assertEqual(renderer.render(game).size, (128, 160))
+
     def test_short_terminal_continuation_ends_the_match(self):
         game = self.play_canned("continuation_canned_short_terminal.json")
 
@@ -179,6 +200,17 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(game.current_ply_san, "Qg7#")
         self.assertEqual(game.phase, MatchPhase.GAME_OVER)
         self.assertEqual(game.game_result, "1-0")
+
+    def test_eval_bar_survives_decisive_expectations(self):
+        game = self.make_match()
+        game.continuation = continuation_from_fixture("continuation_canned_six.json")
+        game.set_phase(MatchPhase.BOARD_HOLD)
+        renderer = Renderer()
+
+        for expectation in (0.0, 0.004, 0.5, 0.996, 1.0):
+            with self.subTest(expectation=expectation):
+                game.white_expectation = expectation
+                self.assertEqual(renderer.render(game).size, (128, 160))
 
     def test_renderer_smokes_all_head_to_head_scenes(self):
         game = self.make_match()

@@ -15,7 +15,8 @@ A match is not one shoot-out. Players complete at least three full rounds (shoot
 
 - Start a match from title.
 - Play a full round through the chess animation.
-- Press A if the game holds on the board, then play round 2 (the other player throws first).
+- Inspect the final chess position for as long as needed. The board must not
+  advance on a timer. Press A to start round 2 (the other color throws first).
 - Finish round 3 the same way.
 - After round 3's animation, verify the `CHECKMATE UNLOCKED` cue and enter round 4.
 
@@ -29,6 +30,9 @@ Preconditions:
 - Fresh game at `title`.
 
 - **Round 1.** Drive a full round. Frames `r1_shoot.png`, `r1_result.png`, `r1_board.png`. `summary.json` `rounds[0]` has scores, `moves_uci` length 6, `start_fen` / `end_fen`.
+- **Board hold.** Advance time by at least an hour and assert the final FEN and
+  `board_hold` scene do not change. The strip says `A NEXT`. Send A before the
+  next round begins.
 - **Round 2.** First shooter is the player who did not shoot first in round 1. Grid seed differs from round 1. `end_fen` of round 1 is `start_fen` of round 2. Frames `r2_shoot.png`, `r2_result.png`, `r2_board.png`.
 - **Round 3.** Same rules. Frames `r3_shoot.png`, `r3_result.png`, `r3_board.png`. Its continuation still has `allow_mate=false`.
 - **After round 3.** Frame `r4_checkmate_unlocked.png` visibly says `CHECKMATE UNLOCKED`; the next continuation request has `allow_mate=true`.

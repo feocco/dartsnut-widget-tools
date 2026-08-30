@@ -198,9 +198,12 @@ class Renderer:
     def render_eval_bar(self, draw, game, x, y, width, height):
         white_height = int(height * max(0.0, min(1.0, game.white_expectation)))
         black_height = height - white_height
-        draw.rectangle((x, y, x + width - 1, y + black_height - 1), fill=(12, 14, 20))
-        draw.rectangle((x, y + black_height, x + width - 1, y + height - 1), fill=(242, 236, 210))
-        draw.line((x, y + black_height, x + width - 1, y + black_height), fill=GOLD)
+        if black_height:
+            draw.rectangle((x, y, x + width - 1, y + black_height - 1), fill=(12, 14, 20))
+        if white_height:
+            draw.rectangle((x, y + black_height, x + width - 1, y + height - 1), fill=(242, 236, 210))
+        divider = min(y + black_height, y + height - 1)
+        draw.line((x, divider, x + width - 1, divider), fill=GOLD)
 
     def render_bottom_strip(self, draw, game):
         draw.rectangle((0, 128, 127, 159), fill=BLACK)
@@ -213,12 +216,7 @@ class Renderer:
                 (f"NEED {game.points_needed}" if game.chase_active else "HIT TARGET", GREEN),
             ]
         elif game.scene in ("continuation", "board_hold"):
-            rows = [
-                (f"ROUND {game.round_number}", GOLD),
-                (f"PLY {game.continuation_index}/{len(game.continuation.moves_uci)}", WHITE),
-                (f"W {int(game.white_expectation * 100)}%", BLUE),
-                (game.current_ply_san or "BOARD HOLD", GREEN),
-            ]
+            rows = self.board_rows(game)
         else:
             rows = [
                 (f"ROUND {game.round_number}", GOLD),
@@ -228,6 +226,14 @@ class Renderer:
             ]
         for index, (text, fill) in enumerate(rows):
             draw.text((3, 128 + index * 8), text[:11], font=FONT_TINY, fill=fill, stroke_width=1, stroke_fill=BLACK)
+
+    def board_rows(self, game):
+        return [
+            (f"ROUND {game.round_number}", GOLD),
+            (f"PLY {game.continuation_index}/{len(game.continuation.moves_uci)}", WHITE),
+            (f"W {int(game.white_expectation * 100)}%", BLUE),
+            ("A NEXT" if game.scene == "board_hold" else game.current_ply_san, GREEN),
+        ]
 
     @staticmethod
     def band_name(margin):
