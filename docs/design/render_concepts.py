@@ -43,12 +43,13 @@ FONT_BIG = ImageFont.load_default(size=16)
 
 FEN = "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3"
 
-# Ruy Lopez, Black to move. One candidate per engine quality bucket.
+# Ruy Lopez, Black to move. One candidate per quality bucket, all verified
+# legal in FEN and ranked by docs/design/render_targeting.py.
 TARGETS = [
-    {"quality": "BEST", "color": BLUE, "san": "a6", "uci": "a7a6", "loss": "-0.1", "piece": "p"},
-    {"quality": "GREAT", "color": GREEN, "san": "Nf6", "uci": "g8f6", "loss": "-0.3", "piece": "n"},
-    {"quality": "OK", "color": GOLD, "san": "d6", "uci": "d7d6", "loss": "-0.6", "piece": "p"},
-    {"quality": "BAD", "color": RED, "san": "b5", "uci": "b7b5", "loss": "-3.3", "piece": "p"},
+    {"quality": "BEST", "color": BLUE, "san": "Nf6", "uci": "g8f6", "loss": "0.0", "piece": "n"},
+    {"quality": "GREAT", "color": GREEN, "san": "Bd6", "uci": "f8d6", "loss": "-0.1", "piece": "b"},
+    {"quality": "OK", "color": GOLD, "san": "Nce7", "uci": "c6e7", "loss": "-1.3", "piece": "n"},
+    {"quality": "BAD", "color": RED, "san": "Qg5", "uci": "d8g5", "loss": "-9.3", "piece": "q"},
 ]
 
 ASSETS = PieceAssets()
@@ -289,18 +290,18 @@ def concept_live_board_resolve():
 
     target = TARGETS[0]
     color = target["color"]
-    tc, tr = view_cell("a6")
+    tc, tr = view_cell(target["uci"][2:])
     tx, ty = cell_center(tc, tr)
-    fc, fr = view_cell("a7")
+    fc, fr = view_cell(target["uci"][:2])
     fx, fy = cell_center(fc, fr)
 
     add_glow(img, tx, ty, 20, color, strength=0.7)
     draw = ImageDraw.Draw(img)
     dashed_circle(draw, tx, ty, 20, shade(color, 0.75))
-    plate_text(draw, tx - 14, ty - 24, "SNAP 20px", shade(color, 0.95), anchor="mm")
+    plate_text(draw, tx + 6, ty - 24, "SNAP 20px", shade(color, 0.95), anchor="mm")
     draw.rectangle((tc * 16, tr * 16, tc * 16 + 15, tr * 16 + 15), outline=WHITE)
     dashed_rect(draw, (fc * 16 + 1, fr * 16 + 1, fc * 16 + 14, fr * 16 + 14), shade(color, 0.7))
-    paste_centered(img, sprite("p", 14, tint=WHITE), tx, ty)
+    paste_centered(img, sprite(target["piece"], 14, tint=WHITE), tx, ty)
 
     hit_x, hit_y = tx - 13, ty + 12
     draw.line((hit_x, hit_y, tx - 2, ty + 2), fill=shade(color, 0.95))
@@ -312,7 +313,7 @@ def concept_live_board_resolve():
     live_board_strip(
         img,
         draw,
-        [("a6 LOCKED", BLUE), ("BEST -0.1", WHITE), ("OFF 16px", DIM), ("WHITE NEXT", GOLD)],
+        [("Nf6 LOCKED", BLUE), ("BEST 0.0", WHITE), ("OFF 18px", DIM), ("WHITE NEXT", GOLD)],
         white_share=0.5,
     )
     return img
@@ -486,7 +487,7 @@ def concept_constellation_hit():
     draw.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), outline=(70, 55, 100))
 
     for orb in ORBS:
-        if orb["target"]["san"] == "Nf6":
+        if orb["target"]["quality"] == "GREAT":
             continue
         draw = draw_orb(img, draw, orb, dim=0.34, trail=False)
 
@@ -511,7 +512,7 @@ def concept_constellation_hit():
 
     draw.rectangle((0, 134, WIDTH - 1, HEIGHT - 1), fill=(4, 5, 9))
     draw.line((0, 134, WIDTH - 1, 134), fill=shade(GREEN, 0.5))
-    text(draw, (64, 143), "Nf6  GREAT", FONT_MED, GREEN, anchor="mm")
+    text(draw, (64, 143), "Bd6  GREAT", FONT_MED, GREEN, anchor="mm")
     text(draw, (64, 153), "lead 0.4s", FONT_TINY, DIM, anchor="mm")
     return img
 
@@ -627,7 +628,7 @@ def concept_duel_hit():
     duel_boss(img, draw, offset=2, damaged=True)
     duel_hp_bar(draw, 0.44, delta=0.12)
     for point in DUEL_POINTS:
-        if point["target"]["san"] == "d6":
+        if point["target"]["quality"] == "OK":
             continue
         side = "right" if point["pos"][0] >= 64 else "left"
         draw = duel_weak_point(img, draw, point, dim=0.22, label_side=side)
@@ -652,8 +653,8 @@ def concept_duel_hit():
 
     draw.rectangle((0, 138, WIDTH - 1, HEIGHT - 1), fill=(10, 8, 12))
     draw.line((0, 138, WIDTH - 1, 138), fill=GOLD)
-    text(draw, (64, 146), "d6  OK", FONT_MED, GOLD, anchor="mm")
-    text(draw, (64, 155), "-0.5  WHITE NEXT", FONT_TINY, DIM, anchor="mm")
+    text(draw, (64, 146), "Nce7  OK", FONT_MED, GOLD, anchor="mm")
+    text(draw, (64, 155), "-1.3  WHITE NEXT", FONT_TINY, DIM, anchor="mm")
     return img
 
 
