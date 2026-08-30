@@ -2,6 +2,11 @@
 
 Drafts only. Nothing here is implemented in `games/pixeldarts_chess_128_160/`.
 
+The newer head-to-head direction is documented in
+[head-to-head-target-round.md](head-to-head-target-round.md). It replaces
+piece-by-piece targeting with a minigame that controls a three-full-move chess
+continuation.
+
 The current build draws a literal 20-wedge dartboard in `render_dartboard()` and
 overlays four quality-colored wedge clusters. That inherits three constraints we
 do not actually have:
