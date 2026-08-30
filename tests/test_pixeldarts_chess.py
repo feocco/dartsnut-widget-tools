@@ -180,6 +180,17 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(game.phase, MatchPhase.GAME_OVER)
         self.assertEqual(game.game_result, "1-0")
 
+    def test_eval_bar_survives_decisive_expectations(self):
+        game = self.make_match()
+        game.continuation = continuation_from_fixture("continuation_canned_six.json")
+        game.set_phase(MatchPhase.BOARD_HOLD)
+        renderer = Renderer()
+
+        for expectation in (0.0, 0.004, 0.5, 0.996, 1.0):
+            with self.subTest(expectation=expectation):
+                game.white_expectation = expectation
+                self.assertEqual(renderer.render(game).size, (128, 160))
+
     def test_renderer_smokes_all_head_to_head_scenes(self):
         game = self.make_match()
         renderer = Renderer()

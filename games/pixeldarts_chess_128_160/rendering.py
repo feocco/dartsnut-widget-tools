@@ -198,9 +198,12 @@ class Renderer:
     def render_eval_bar(self, draw, game, x, y, width, height):
         white_height = int(height * max(0.0, min(1.0, game.white_expectation)))
         black_height = height - white_height
-        draw.rectangle((x, y, x + width - 1, y + black_height - 1), fill=(12, 14, 20))
-        draw.rectangle((x, y + black_height, x + width - 1, y + height - 1), fill=(242, 236, 210))
-        draw.line((x, y + black_height, x + width - 1, y + black_height), fill=GOLD)
+        if black_height:
+            draw.rectangle((x, y, x + width - 1, y + black_height - 1), fill=(12, 14, 20))
+        if white_height:
+            draw.rectangle((x, y + black_height, x + width - 1, y + height - 1), fill=(242, 236, 210))
+        divider = min(y + black_height, y + height - 1)
+        draw.line((x, divider, x + width - 1, divider), fill=GOLD)
 
     def render_bottom_strip(self, draw, game):
         draw.rectangle((0, 128, 127, 159), fill=BLACK)
