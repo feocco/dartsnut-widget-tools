@@ -7,7 +7,6 @@ from pathlib import Path
 
 from tests.fixture_support import load_analyse_fixture
 
-
 GAME_DIR = Path(__file__).resolve().parents[1] / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))
 

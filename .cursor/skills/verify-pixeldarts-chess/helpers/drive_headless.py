@@ -9,7 +9,6 @@ import os
 import sys
 from pathlib import Path
 
-
 REPO = Path(__file__).resolve().parents[4]
 GAME = REPO / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(REPO))
@@ -20,8 +19,8 @@ from chess_logic.continuation import Continuation  # noqa: E402
 from engine_client import chess  # noqa: E402
 from match import Match, MatchPhase  # noqa: E402
 from rendering import Renderer  # noqa: E402
-from tests.fixture_support import continuation_from_fixture  # noqa: E402
 
+from tests.fixture_support import continuation_from_fixture  # noqa: E402
 
 RUN_LOG = []
 

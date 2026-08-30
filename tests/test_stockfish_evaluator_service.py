@@ -9,7 +9,6 @@ from pathlib import Path
 
 from tests.fixture_support import load_analyse_fixture
 
-
 SERVICE_DIR = Path(__file__).resolve().parents[1] / "services" / "stockfish_evaluator"
 sys.path.insert(0, str(SERVICE_DIR))
 

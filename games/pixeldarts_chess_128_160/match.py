@@ -1,14 +1,13 @@
-from enum import Enum
+from enum import StrEnum
 
 from chess_logic.continuation import ContinuationPlanner, ContinuationRequest
 from engine_client import build_default_evaluator, chess, require_chess
 from minigame.target_round import RoundResult, TargetRound
 
-
 DART_COLORS = {"white": "blue", "black": "red"}
 
 
-class MatchPhase(str, Enum):
+class MatchPhase(StrEnum):
     TITLE = "title"
     TURN_INTRO = "turn_intro"
     TARGETS = "targets"

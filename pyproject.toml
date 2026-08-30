@@ -30,5 +30,4 @@ select = ["E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["tools/dartsnut", "games/pixeldarts_chess_128_160/game_state.py", "games/pixeldarts_chess_128_160/openings.py"]
-exclude = ["games/pixeldarts_chess_128_160/chess"]
+files = ["tools/dartsnut"]

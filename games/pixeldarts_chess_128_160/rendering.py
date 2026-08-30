@@ -1,8 +1,6 @@
-from PIL import Image, ImageDraw, ImageFont
-
 from assets import PieceAssets
 from engine_client import chess
-
+from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 128, 160
 PLAY_HEIGHT = 128
@@ -209,10 +207,15 @@ class Renderer:
         draw.rectangle((0, 128, 127, 159), fill=BLACK)
         draw.rectangle((0, 128, 63, 159), outline=(56, 64, 76))
         if game.scene in ("targets", "sudden_death"):
+            progress = (
+                f"BEAT {game.score_to_beat}"
+                if game.chase_active
+                else f"{game.target_round.remaining_darts(game.active_color)} DARTS"
+            )
             rows = [
                 (f"R{game.round_number} {game.active_color.upper()}", BLUE if game.active_color == "white" else RED),
                 (f"SCORE {game.target_round.scores[game.active_color]}", WHITE),
-                (f"BEAT {game.score_to_beat}" if game.chase_active else f"{game.target_round.remaining_darts(game.active_color)} DARTS", GOLD),
+                (progress, GOLD),
                 (f"NEED {game.points_needed}" if game.chase_active else "HIT TARGET", GREEN),
             ]
         elif game.scene in ("continuation", "board_hold"):

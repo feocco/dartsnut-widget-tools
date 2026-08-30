@@ -11,7 +11,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 ROOT = Path(__file__).resolve().parent
 ASSET_DIR = ROOT / "assets" / "kenney-shooting-gallery"
 OUT_DIR = ROOT / "images"

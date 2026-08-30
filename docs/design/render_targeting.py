@@ -24,12 +24,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import chess  # noqa: E402
 from render_concepts import (  # noqa: E402
     ASSETS,
-    BLACK,
     BLUE,
     DIM,
     FEN,
-    FONT_BIG,
-    FONT_MED,
     FONT_SMALL,
     FONT_TINY,
     GOLD,
@@ -41,9 +38,9 @@ from render_concepts import (  # noqa: E402
     WIDTH,
     add_glow,
     bezel,
+    darken_region,
     dart_marker,
     dart_pips,
-    darken_region,
     dashed_circle,
     dashed_line,
     dashed_rect,

@@ -2,7 +2,6 @@ import json
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 GAME_DIR = ROOT / "games" / "pixeldarts_chess_128_160"
 ANALYSE_DIR = ROOT / "tests" / "fixtures" / "analyse"
@@ -10,7 +9,7 @@ CONTINUATION_DIR = ROOT / "tests" / "fixtures" / "continuation"
 sys.path.insert(0, str(GAME_DIR))
 
 from chess_logic.continuation import Continuation, PlyTrace
-from engine_client import AnalysisCandidate, chess
+from engine_client import AnalysisCandidate
 
 
 def load_json(path):

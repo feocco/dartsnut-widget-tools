@@ -3,11 +3,10 @@ import json
 import os
 import time
 
-from pydartsnut import Dartsnut
-
 from frame_pump import FramePump
 from input_adapter import DartsnutInputAdapter
 from match import Match
+from pydartsnut import Dartsnut
 from rendering import Renderer
 
 

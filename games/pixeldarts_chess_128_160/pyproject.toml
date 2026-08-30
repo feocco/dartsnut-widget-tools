@@ -19,7 +19,6 @@ include = [
   "conf.json",
   "engine_client.py",
   "frame_pump.py",
-  "game_state.py",
   "input_adapter.py",
   "main.py",
   "match.py",

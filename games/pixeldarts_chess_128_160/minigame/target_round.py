@@ -1,6 +1,5 @@
-from dataclasses import dataclass
 import random
-
+from dataclasses import dataclass
 
 PLAY_HEIGHT = 128
 GRID_CENTERS = (

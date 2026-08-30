@@ -3,7 +3,6 @@ import sys
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 GAME_DIR = ROOT / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))

@@ -8,7 +8,7 @@ import os
 import shlex
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
@@ -146,7 +146,7 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     base_url = args.url.rstrip("/")
-    since = datetime.now(timezone.utc).isoformat()
+    since = datetime.now(UTC).isoformat()
 
     status, analysis = run_curl(
         base_url,
