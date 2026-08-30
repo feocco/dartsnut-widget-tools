@@ -21,6 +21,7 @@
     "six_ply_script.json",
     "early_terminal_script.json",
     "continuation_canned_six.json",
+    "continuation_canned_three_rounds.json",
     "continuation_canned_short_terminal.json",
     "continuation_canned_round4_mate.json"
   ]

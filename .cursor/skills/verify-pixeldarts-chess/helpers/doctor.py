@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import py_compile
 import subprocess
 import sys
@@ -14,7 +15,7 @@ GAME = REPO / "games" / "pixeldarts_chess_128_160"
 
 
 def compile_targets():
-    names = ["main.py", "chess_game.py", "rendering.py", "engine_client.py", "match.py"]
+    names = ["main.py", "rendering.py", "engine_client.py", "match.py"]
     files = [GAME / name for name in names if (GAME / name).exists()]
     files.extend(sorted((GAME / "minigame").glob("*.py")) if (GAME / "minigame").is_dir() else [])
     files.extend(sorted((GAME / "chess_logic").glob("*.py")) if (GAME / "chess_logic").is_dir() else [])
@@ -31,10 +32,14 @@ def unittest_ok():
             "unittest",
             "tests/test_pixeldarts_chess.py",
             "tests/test_engine_client.py",
+            "tests/test_target_round.py",
+            "tests/test_continuation_planner.py",
+            "tests/test_stockfish_evaluator_service.py",
         ],
         cwd=REPO,
         capture_output=True,
         text=True,
+        env={key: value for key, value in os.environ.items() if key != "STOCKFISH_API_URL"},
     )
     return proc.returncode == 0, proc.stderr[-2000:]
 

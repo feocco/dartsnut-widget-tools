@@ -59,38 +59,30 @@ HTTP service when `STOCKFISH_API_URL` is set, for example:
 export STOCKFISH_API_URL=http://192.168.1.43:8096
 ```
 
-If no Stockfish service or binary is available, the game uses a simple
-material evaluator so the prototype can still run in the emulator.
+If no Stockfish service or binary is available, the game uses a material
+fallback. Offline verification uses checked-in analyse and continuation
+fixtures, so it does not confuse fallback output with live Stockfish evidence.
 
-### Current Beta Gameplay Flow
+### Head-to-head gameplay
 
-PixelDarts Chess currently runs as a two-player PixelDart game:
-
-- White chooses an opening family by shooting a horizontal opening band.
-- Black chooses the reply package by shooting a reply band.
-- The app applies the stored opening line and shows an opening-complete recap
-  from White's perspective.
-- Normal turns rank legal chess moves with Stockfish when available.
-- The dartboard maps colored wedge clusters to exact moves from Stockfish:
-  blue = best, green = within roughly 100 centipawns of best, yellow = the
-  strongest playable move roughly 100-300 centipawns worse, red = the worst
-  available move and usually a 300+ centipawn blunder.
-- Each player has three dart attempts. Three misses force the blunder move.
-- The board rotates for the active shooter during normal play.
-- After a move hits, the piece animates, the landed board holds briefly, then
-  the board rotates to the next player.
+- Each round generates a seeded 3x3 target grid shared by both colors.
+- Both colors throw three darts; the chase HUD shows `BEAT` and `NEED`.
+- A tie enters repeatable one-dart sudden death on a new shared grid.
+- The score margin selects a 0/40/100/200/350cp loss band.
+- The continuation planner performs one MultiPV search per ply, up to six.
+- The chess position persists and first shooter alternates by color.
+- Checkmate is filtered in rounds 1–3. `CHECKMATE UNLOCKED` appears before
+  round 4, where mate candidates become legal.
 
 ### PixelDarts Chess Preview
 
-These frames are generated from the current game renderer.
+Generate current frames with:
 
-![PixelDarts Chess title screen](docs/images/pixeldarts_chess/title.png)
-
-![White shoots cutscene](docs/images/pixeldarts_chess/white-shoots-cutscene.png)
-
-![Opening choices screen](docs/images/pixeldarts_chess/opening-choices.png)
-
-![Opening complete board recap](docs/images/pixeldarts_chess/opening-complete-board.png)
+```bash
+python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
+  --feature three-round-match \
+  --out artifacts/verify-pixeldarts-chess/three-round-match
+```
 
 ## Stockfish Evaluator Image
 

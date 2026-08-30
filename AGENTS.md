@@ -10,7 +10,9 @@
 ## Agent Workflows
 
 - Test helper logic: `python3 -m unittest tests/test_upload_widget.py`.
-- Compile check: `python3 -m py_compile scripts/upload_widget.py widgets/codex_status_128_128/main.py`.
+- Test PixelDarts Chess offline: `env -u STOCKFISH_API_URL python3 -m unittest tests/test_target_round.py tests/test_continuation_planner.py tests/test_engine_client.py tests/test_stockfish_evaluator_service.py tests/test_pixeldarts_chess.py`.
+- Verify the three-round renderer: `python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py --feature three-round-match --out artifacts/verify-pixeldarts-chess/three-round-match`.
+- Compile check: `python3 -m py_compile scripts/upload_widget.py widgets/codex_status_128_128/main.py games/pixeldarts_chess_128_160/main.py`.
 - Dry-run upload first: `python3 scripts/upload_widget.py --host 192.168.1.194 --dry-run`.
 - Real upload: `python3 scripts/upload_widget.py --host 192.168.1.194`.
 - Real upload mutates board `apps/conf.json`; dry-run first.
