@@ -2,10 +2,10 @@ import time
 
 
 class FramePump:
-    def __init__(self, dartsnut, renderer, game, logger=None):
+    def __init__(self, dartsnut, renderer, state_source, logger=None):
         self.dartsnut = dartsnut
         self.renderer = renderer
-        self.game = game
+        self.state_source = state_source
         self.logger = logger
         self.frame = None
         self.dirty = True
@@ -43,12 +43,13 @@ class FramePump:
 
     def render_cached_frame(self):
         start = time.perf_counter()
-        self.frame = bytearray(self.renderer.render(self.game).tobytes())
+        self.renderer.debug_message = self.stats_text()
+        state = getattr(self.state_source, "state", self.state_source)
+        self.frame = bytearray(self.renderer.render(state).tobytes())
         self.last_render_ms = (time.perf_counter() - start) * 1000
         self.max_render_ms = max(self.max_render_ms, self.last_render_ms)
         self.render_count += 1
         self.dirty = False
-        self.game.debug_message = self.stats_text()
 
     def stats_text(self):
         return f"a{self.accepted_writes} r{self.rejected_writes} {self.last_render_ms:.1f}ms"

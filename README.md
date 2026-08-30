@@ -1,85 +1,68 @@
 # Dartsnut Widget Tools
 
-Small local tools for building and uploading custom Dartsnut widgets and games.
+This repository contains a PixelBoard widget, a PixelDart chess game, and one
+WebSocket upload tool. Each app directory contains the metadata and Python
+dependencies required by the current Dartsnut Agent emulator.
 
-This repo currently contains:
-
-- `widgets/codex_status_128_128/` - a simple PixelBoard widget.
-- `games/pixeldarts_chess_128_160/` - a two-player PixelDart chess game.
-- `scripts/upload_widget.py` - uploads a widget to a board over the Dartsnut WebSocket API.
-- `scripts/upload_app.py` - uploads either a widget or a PixelDart game.
-- `docs/dartsnut-websocket-upload.md` - short notes on the upload flow and emulator setup.
-
-The active PixelDarts Chess replacement is specified as executable `/goal`
-slices in [docs/design/head-to-head-goals.md](docs/design/head-to-head-goals.md).
-
-Clone it on another machine:
+## Set up development
 
 ```bash
 git clone https://github.com/feocco/dartsnut-widget-tools.git
 cd dartsnut-widget-tools
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -e ".[dev]"
+python3 -m unittest discover -s tests -v
 ```
 
-## Upload To PixelBoard
+Cloud development and tests do not require Stockfish. The chess game uses the
+material evaluator when neither `STOCKFISH_API_URL` nor `STOCKFISH_PATH` is
+configured.
 
-Default target is the PixelBoard we verified on the LAN:
+## Plan and upload an app
+
+Set the target for your board. The repository does not contain private network
+addresses.
 
 ```bash
-python3 scripts/upload_widget.py --host 192.168.1.194
+export DARTSNUT_HOST="<board-ip>"
+python3 -m tools.dartsnut plan \
+  --app widgets/codex_status_128_128
 ```
 
-Dry-run first if you want to see exactly what it will change:
+`plan` reads the device and its page configuration. It does not write. Review
+the declared file list and page status before uploading.
 
 ```bash
-python3 scripts/upload_widget.py --host 192.168.1.194 --dry-run
+python3 -m tools.dartsnut upload \
+  --app widgets/codex_status_128_128
 ```
 
-The uploader writes only to the board's `apps/` directory and updates
-`apps/conf.json` so the widget appears as a page named `Codex Status`.
+The tool writes only under the board's `apps/` directory. Widget page updates
+preserve the existing UUID, settings, field values, sibling widgets, and
+unknown keys.
 
-## Upload PixelDarts Chess To PixelDart
-
-PixelDarts Chess is a game, not a widget, so upload it to the PixelDart game
-list:
+Upload PixelDarts Chess with the same command:
 
 ```bash
-python3 scripts/upload_app.py \
-  --host 192.168.1.250 \
-  --app games/pixeldarts_chess_128_160 \
-  --cleanup-widget-page
+python3 -m tools.dartsnut plan \
+  --app games/pixeldarts_chess_128_160
+python3 -m tools.dartsnut upload \
+  --app games/pixeldarts_chess_128_160
 ```
 
-PixelDarts Chess uses `python-chess` and prefers a Stockfish binary available
-as `stockfish` or via `STOCKFISH_PATH`. It can also use the homelab Stockfish
-HTTP service when `STOCKFISH_API_URL` is set, for example:
-
-```bash
-export STOCKFISH_API_URL=http://192.168.1.43:8096
-```
-
-If no Stockfish service or binary is available, the game uses a material
-fallback. Offline verification uses checked-in analyse and continuation
-fixtures, so it does not confuse fallback output with live Stockfish evidence.
-
-### Head-to-head gameplay
+## Head-to-head PixelDarts Chess
 
 - Each round generates a seeded 3x3 target grid shared by both colors.
 - Both colors throw three darts; the chase HUD shows `BEAT` and `NEED`.
 - A tie enters repeatable one-dart sudden death on a new shared grid.
 - The score margin selects a 0/40/100/200/350cp loss band.
 - The continuation planner performs one MultiPV search per ply, up to six.
-- After the sixth ply, the final board remains on screen until a player presses
-  A to begin the next round.
+- After the sixth ply, the final board remains until a player presses A.
 - The chess position persists and first shooter alternates by color.
-- Checkmate is filtered in rounds 1–3. `CHECKMATE UNLOCKED` appears before
-  round 4, where mate candidates become legal.
+- Checkmate is filtered in rounds 1–3 and unlocked for round 4.
 
 Target and shot-mark art comes from Kenney's CC0 Shooting Gallery pack; the
 pack license is kept in `docs/design/assets/kenney-shooting-gallery/`.
-
-### PixelDarts Chess Preview
 
 Generate current frames with:
 
@@ -89,16 +72,17 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
   --out artifacts/verify-pixeldarts-chess/three-round-match
 ```
 
-## Stockfish Evaluator Image
+## Stockfish evaluator
 
-This repo owns the small HTTP wrapper used by PixelDarts Chess:
+This repo owns the HTTP wrapper used by PixelDarts Chess:
 
 ```bash
-docker build -t ghcr.io/feocco/dartsnut-widgets-stockfish-evaluator:latest services/stockfish_evaluator
-docker run --rm -p 127.0.0.1:8096:8096 ghcr.io/feocco/dartsnut-widgets-stockfish-evaluator:latest
+docker build -t dartsnut-stockfish services/stockfish_evaluator
+docker run --rm -p 127.0.0.1:8096:8096 dartsnut-stockfish
+export STOCKFISH_API_URL="http://127.0.0.1:8096"
 ```
 
-The game sends the current board state to `POST /analyse` as a FEN string:
+The game sends the current position to `POST /analyse`:
 
 ```bash
 curl -s http://127.0.0.1:8096/analyse \
@@ -112,39 +96,25 @@ curl -s http://127.0.0.1:8096/analyse \
 ```
 
 The response includes ordered PV heads with `uci`, `san`, `score_cp_stm`,
-`mate`, and White expectation. `root_score_cp` and `white_expectation` describe
-the submitted position from White's perspective.
-
-The default `depth=10` and `movetime_ms=120` are arcade-speed analysis settings,
-not Elo settings.
-It is intended to distinguish good moves from obvious mistakes quickly for
-casual play. See [services/stockfish_evaluator/README.md](services/stockfish_evaluator/README.md)
-for the full API contract and tuning notes.
+`mate`, and White expectation. See `services/stockfish_evaluator/README.md` for
+the full API contract and tuning notes.
 
 The image is published by `.github/workflows/stockfish-evaluator-image.yml`.
-Runtime Compose config belongs in `feocco/homelab-config`, not in this app
-source tree.
+Runtime Compose configuration belongs in `feocco/homelab-config`.
 
-## Run In The Emulator
+## Run in the emulator
 
-Clone the upstream emulator:
+The current upstream emulator is the Electron-based
+[Dartsnut Agent](https://github.com/Dartsnut/dartsnut_emulator). It launches a
+headless Python core and synchronizes each app from its `pyproject.toml`.
 
 ```bash
 git clone https://github.com/Dartsnut/dartsnut_emulator.git
 cd dartsnut_emulator
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirement.txt
+pnpm install
+pnpm run setup:python
+pnpm run dev
 ```
 
-Then run PixelDarts Chess:
-
-```bash
-python emulator.py \
-  --path /path/to/dartsnut-widget-tools/games/pixeldarts_chess_128_160 \
-  --params '{"debug": true, "debug_overlay": false, "stockfish_api_url": "http://192.168.1.43:8096"}'
-```
-
-The emulator uses Tkinter, so use a Python install that can open desktop GUI
-windows. Press `P` in the emulator to save a screenshot under its `capture/`
-folder. Mouse left-click sends a dart, `K` is Button A, and `L` is Button B.
+Open either app directory from the Dartsnut Agent UI. Use its input controls to
+throw darts and press buttons.

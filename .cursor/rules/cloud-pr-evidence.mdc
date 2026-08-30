@@ -1,0 +1,18 @@
+---
+description: Require reproducible verification and visual evidence on Cloud Agent pull requests
+alwaysApply: true
+---
+
+# Cloud pull request evidence
+
+Before opening or updating a pull request from a Cloud Agent:
+
+1. Run the repository checks in `AGENTS.md`.
+2. Execute the `.cursor/skills/verify-*` skill for each changed user-facing
+   surface.
+3. Capture a real screenshot or video that shows the action and its successful
+   result.
+4. Add the minimal useful evidence to the pull request description.
+
+Do not treat compilation, a final frame without the triggering action, or an
+agent summary as runtime proof.

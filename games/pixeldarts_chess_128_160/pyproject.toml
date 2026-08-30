@@ -1,0 +1,31 @@
+[project]
+name = "pixeldarts-chess-128-160"
+version = "0.4.2"
+requires-python = ">=3.11"
+dependencies = [
+  "chess==1.11.2",
+  "pillow==12.3.0",
+  "pydartsnut==1.2.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.dartsnut]
+include = [
+  "assets/*.png",
+  "assets.py",
+  "chess_game.py",
+  "conf.json",
+  "dartboard.py",
+  "engine_client.py",
+  "fixtures/*.json",
+  "frame_pump.py",
+  "game_state.py",
+  "input_adapter.py",
+  "main.py",
+  "openings.py",
+  "pyproject.toml",
+  "rendering.py",
+  "uv.lock",
+]

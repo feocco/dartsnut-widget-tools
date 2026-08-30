@@ -6,3 +6,5 @@ __pycache__/
 capture/
 artifacts/
 .preview/
+dartsnut_emulator/
+*.egg-info/

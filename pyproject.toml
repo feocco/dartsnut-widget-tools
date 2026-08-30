@@ -1,0 +1,34 @@
+[project]
+name = "dartsnut-widget-tools"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "chess==1.11.2",
+  "pillow==12.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy",
+  "ruff",
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.ruff]
+target-version = "py311"
+line-length = 130
+exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["tools/dartsnut", "games/pixeldarts_chess_128_160/game_state.py", "games/pixeldarts_chess_128_160/openings.py"]
+exclude = ["games/pixeldarts_chess_128_160/chess"]

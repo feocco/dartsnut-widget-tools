@@ -2,7 +2,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-
 ASSET_DIR = Path(__file__).resolve().parent / "assets"
 
 

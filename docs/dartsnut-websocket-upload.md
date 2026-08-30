@@ -1,8 +1,6 @@
-# Dartsnut Upload And Emulator Notes
+# Dartsnut upload and emulator reference
 
-These are the basics we verified.
-
-## Board Upload
+## Board API
 
 Dartsnut boards expose a local WebSocket API:
 
@@ -10,97 +8,64 @@ Dartsnut boards expose a local WebSocket API:
 ws://<board-ip>:9251/ws
 ```
 
-The PixelBoard we tested was:
+`tools/dartsnut/board.py` implements these actions:
 
-```text
-192.168.1.194
-```
+- `get_device_info` confirms the target board.
+- `create_directory` creates `apps/<app_id>`.
+- `send_file` uploads files declared by the app manifest.
+- `read_json` and `write_json` reconcile widget pages.
+- `reload_conf` reloads changed widget pages.
+- `list_apps` verifies the installed app.
 
-The PixelDart game board we tested was:
+The upload tool does not use SSH or edit firmware. It writes only under
+`apps/`.
 
-```text
-192.168.1.250
-```
+## Upload flow
 
-The upload scripts use these WebSocket actions:
-
-- `get_device_info` - confirm the target board.
-- `create_directory` - create `apps/<app_id>`.
-- `send_file` - upload `conf.json`, `main.py`, and assets.
-- `read_json` / `write_json` - update `apps/conf.json` for widgets or stale-page cleanup.
-- `reload_conf` - reload widget pages after widget config changes.
-- `list_apps` - verify the app folder is installed.
-
-Run:
+Set `DARTSNUT_HOST` or pass `--host`.
 
 ```bash
-python3 scripts/upload_widget.py --host 192.168.1.194
+python3 -m tools.dartsnut plan --app widgets/codex_status_128_128
+python3 -m tools.dartsnut upload --app widgets/codex_status_128_128
+python3 -m tools.dartsnut verify --app widgets/codex_status_128_128
 ```
 
-Upload PixelDarts Chess as a game:
+`plan` connects to the board and reads configuration without writing. Each app
+declares its exact upload files under `[tool.dartsnut]` in `pyproject.toml`.
+Hidden files, environment files, caches, virtual environments, bytecode,
+editor files, symlinks, and path escapes are rejected.
 
-```bash
-python3 scripts/upload_app.py --host 192.168.1.250 --app games/pixeldarts_chess_128_160 --cleanup-widget-page
-```
+Widget reconciliation matches the widget reference or its stable page UUID. A
+title collision fails. Existing page settings and unrelated widgets remain
+unchanged.
 
-Dry-run:
+## App contract
 
-```bash
-python3 scripts/upload_widget.py --host 192.168.1.194 --dry-run
-```
-
-The script does not use SSH and does not edit the firmware repo. It writes under
-the board's `apps/` directory.
-
-## Widget Shape
-
-A widget folder needs:
+Every app directory contains:
 
 ```text
 conf.json
 main.py
+pyproject.toml
 ```
 
-The `id` in `conf.json` should match the folder name. The sample widget is:
-
-```text
-widgets/codex_status_128_128/
-```
-
-## Game Shape
-
-A PixelDart game folder needs:
-
-```text
-conf.json
-main.py
-assets/
-```
-
-The `conf.json` needs `type: "game"`, `size: [128, 160]`, and at least one
-base64 `preview` image for the game selector. PixelDarts Chess is:
-
-```text
-games/pixeldarts_chess_128_160/
-```
+The directory name matches `conf.json.id`. PixelBoard widgets use `[128, 128]`.
+PixelDart games use `[128, 160]` and include a preview.
 
 ## Emulator
 
-The upstream emulator is here:
-
-```text
-https://github.com/Dartsnut/dartsnut_emulator
-```
-
-It can run on macOS, Linux, or Windows with a desktop Python environment. It uses
-Tkinter, so the Python install has to support GUI windows.
-
-Example:
+Use the current Electron-based
+[Dartsnut Agent](https://github.com/Dartsnut/dartsnut_emulator). The desktop
+application runs a headless Python emulator core and uses `uv` to synchronize
+the selected app's `pyproject.toml`.
 
 ```bash
-python emulator.py --path /path/to/dartsnut-widget-tools/games/pixeldarts_chess_128_160 --params '{"debug": true}'
+git clone https://github.com/Dartsnut/dartsnut_emulator.git
+cd dartsnut_emulator
+pnpm install
+pnpm run setup:python
+pnpm run dev
 ```
 
-Mouse left-click sends a dart. `K` is Button A, `L` is Button B, and `WASD`
-are directional buttons. Press `P` in the emulator window to save a screenshot
-under the emulator repo's `capture/` folder.
+Open an app directory in the desktop UI. Use the built-in controls for darts,
+buttons, screenshots, and GIF recording.
