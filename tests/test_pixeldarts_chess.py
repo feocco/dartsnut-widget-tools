@@ -17,6 +17,12 @@ from rendering import Renderer
 
 
 class DynamicPlanner:
+    LINE = (
+        "e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6",
+        "b5a4", "g8f6", "e1g1", "f8e7", "f1e1", "b7b5",
+        "a4b3", "d7d6", "c2c3", "e8g8", "h2h3", "c6b8",
+    )
+
     def __init__(self):
         self.requests = []
 
@@ -25,10 +31,11 @@ class DynamicPlanner:
         board = chess.Board(request.starting_fen)
         ucis = []
         sans = []
-        for _ in range(request.max_plies):
+        start = (len(self.requests) - 1) * request.max_plies
+        for uci in self.LINE[start : start + request.max_plies]:
             if board.is_game_over(claim_draw=True):
                 break
-            move = next(iter(board.legal_moves))
+            move = chess.Move.from_uci(uci)
             ucis.append(move.uci())
             sans.append(board.san(move))
             board.push(move)
