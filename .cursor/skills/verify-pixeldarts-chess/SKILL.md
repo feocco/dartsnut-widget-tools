@@ -78,6 +78,15 @@ Feature ids match the map files: `start-match`, `player-one-set-score`, `player-
 
 The helper exits nonzero when a driven feature does not reach its required state.
 
+Live Stockfish uses a separate helper because fixture-backed drives must remain deterministic:
+
+```bash
+python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py \
+  --url http://127.0.0.1:8096 \
+  --container stockfish-evaluator \
+  --out artifacts/goal-5-stockfish
+```
+
 Emulator drive, when a display is available:
 
 - Start from title.
@@ -127,6 +136,7 @@ Kills only the PID in that file. Does not delete `artifacts/verify-pixeldarts-ch
 | --- | --- |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/doctor.py` | Readiness JSON |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py --feature start-match --out DIR` | One feature |
+| `python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py --out DIR` | Live evaluator and continuation |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/cleanup.py --pid-file FILE` | Emulator teardown |
 
 Read `features/README.md` before driving. One convenient entry point is incomplete when the map lists others.

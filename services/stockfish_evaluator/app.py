@@ -1,11 +1,11 @@
 import json
+import logging
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import chess
 import chess.engine
-
 
 HOST = os.environ.get("SERVICE_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SERVICE_PORT", "8096"))
@@ -78,6 +78,11 @@ class StockfishAnalyser:
 analyser = StockfishAnalyser()
 
 
+def configure_logging():
+    level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
+    logging.basicConfig(level=level, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path != "/health":
@@ -132,6 +137,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    configure_logging()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"stockfish-evaluator listening on {HOST}:{PORT}")
     try:
