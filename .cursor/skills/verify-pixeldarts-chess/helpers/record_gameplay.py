@@ -87,22 +87,26 @@ class Host:
             time.sleep(0.004)
 
     def press(self, button: str = "a") -> None:
-        before = self.frames
-        self.pdo.buf[0] = 1 if button == "a" else 2
-        self.pump(0.5)
-        self.pdo.buf[0] = 0
-        self.pump(0.15)
-        if self.frames == before:
-            raise RuntimeError(f"button {button} produced no new frame")
+        for _ in range(3):
+            before = self.frames
+            self.pdo.buf[0] = 1 if button == "a" else 2
+            self.pump(0.75)
+            self.pdo.buf[0] = 0
+            self.pump(0.40)
+            if self.frames > before:
+                return
+        raise RuntimeError(f"button {button} produced no new frame")
 
     def throw(self, x: int, y: int) -> None:
-        before = self.frames
-        self.set_dart(x, y)
-        self.pump(0.75)
-        self.clear_darts()
-        self.pump(DART_UNBLOCK_SECONDS)
-        if self.frames == before:
-            raise RuntimeError(f"dart {x},{y} produced no new frame")
+        for _ in range(3):
+            before = self.frames
+            self.set_dart(x, y)
+            self.pump(0.75)
+            self.clear_darts()
+            self.pump(max(DART_UNBLOCK_SECONDS, 0.40))
+            if self.frames > before:
+                return
+        raise RuntimeError(f"dart {x},{y} produced no new frame")
 
     def write_concat(self, path: Path) -> float:
         if not self.timeline:
