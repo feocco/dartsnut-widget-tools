@@ -106,6 +106,7 @@ def complete_round(game, renderer, out, number):
     animate(game)
     save_frame(renderer, game, out, f"r{number}_board.png")
     end_fen = game.board.fen()
+    moves_uci = list(game.continuation.moves_uci)
     game.tick(game.scene_started + game.BOARD_HOLD_SECONDS + 0.01)
     return {
         "round": number,
@@ -114,7 +115,7 @@ def complete_round(game, renderer, out, number):
         "scores": result.scores,
         "start_fen": start_fen,
         "end_fen": end_fen,
-        "moves_uci": list(game.continuation.moves_uci),
+        "moves_uci": moves_uci,
         "allow_mate": number >= 4,
     }
 
