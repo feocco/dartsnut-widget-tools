@@ -41,10 +41,11 @@ Each file: H1, one paragraph, then `Sub-features`, `How to get to it (user POV)`
 - [Three-round match](./three-round-match.md) — three full rounds, swapped first shooter, mechanic after round 3.
 - [Sudden death](./sudden-death.md) — tied scores, one dart each, new shared grid.
 - [Finish by checkmate](./game-over.md) — terminal continuation, result screen, A reset.
+- [Live Stockfish](./live-stockfish.md) proves deployed `/analyse`, removed `/rank`, one UCI search, and HTTP-backed WDL.
 
 A green `continuation-and-animation` on round 1 is not a match pass. Drive `three-round-match` before calling the game done.
 
 ## Optional (not in this map yet)
 
-Ask before adding: hardware upload, Stockfish-vs-fallback labeling, debug
-overlay, bounce-out rejection, B-reset mid-round, extra minigames.
+Ask before adding: hardware upload, debug overlay, bounce-out rejection,
+B-reset mid-round, extra minigames.
