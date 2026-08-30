@@ -1,14 +1,16 @@
 # PixelDarts Chess verification map
 
-This directory is the source for verifying user-facing PixelDarts Chess. Read this index, then the matching feature file.
-
-The game is being replaced: dartboard wedges become a 3x3 target round that buys a six-ply chess line. Doctor reports `implementation`. Drive a feature only when that value matches the file.
+This directory is the source for verifying the head-to-head PixelDarts Chess
+game. Read this index, then the matching feature file. Doctor must report
+`implementation: head-to-head`.
 
 ## Baseline preconditions
 
 - Work from the repo root.
 - Run `python3 .cursor/skills/verify-pixeldarts-chess/helpers/doctor.py` and require `"ok": true`.
 - Use a fresh in-process game per feature (`drive_headless.py` does this). Do not reuse emulator state across features.
+- Use `record_gameplay.py` for changes to `main.py`, `FramePump`, input timing,
+  rendering, board holds, or evaluator integration.
 - Do not upload to a physical board unless the user asked.
 - Write proof under `artifacts/verify-pixeldarts-chess/<feature-id>/`.
 
@@ -38,9 +40,11 @@ Each file: H1, one paragraph, then `Sub-features`, `How to get to it (user POV)`
 - [Score becomes chess](./continuation-and-animation.md) — one round's margin, legal six-ply line, animated pieces, real eval.
 - [Three-round match](./three-round-match.md) — three full rounds, swapped first shooter, mechanic after round 3.
 - [Sudden death](./sudden-death.md) — tied scores, one dart each, new shared grid.
+- [Finish by checkmate](./game-over.md) — terminal continuation, result screen, A reset.
 
 A green `continuation-and-animation` on round 1 is not a match pass. Drive `three-round-match` before calling the game done.
 
 ## Optional (not in this map yet)
 
-Ask before adding: hardware upload, checkmate/game-over, Stockfish-vs-fallback labeling, debug overlay, bounce-out rejection, B-reset mid-round, extra minigames.
+Ask before adding: hardware upload, Stockfish-vs-fallback labeling, debug
+overlay, bounce-out rejection, B-reset mid-round, extra minigames.

@@ -142,6 +142,12 @@ def main() -> int:
     host = Host(out / "frames")
     env = dict(os.environ)
     env["STOCKFISH_PATH"] = shutil.which("stockfish") or "/usr/games/stockfish"
+    if env.get("STOCKFISH_API_URL"):
+        evaluator_source = "homelab-http"
+    elif Path(env["STOCKFISH_PATH"]).is_file():
+        evaluator_source = "local-stockfish"
+    else:
+        evaluator_source = "material-fallback"
     game = subprocess.Popen(
         [args.python, "main.py", "--params", '{"debug": true}', "--data-store", str(out / "data")],
         cwd=str(GAME),
@@ -150,7 +156,7 @@ def main() -> int:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    summary = {"passed": False, "rounds": args.rounds}
+    summary = {"passed": False, "rounds": args.rounds, "evaluator": evaluator_source}
     try:
         host.pump(1.5)
         if game.poll() is not None:

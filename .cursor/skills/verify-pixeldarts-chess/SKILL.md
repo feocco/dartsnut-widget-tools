@@ -11,7 +11,9 @@ Secondary surfaces are `scripts/upload_app.py` over `ws://<host>:9251/ws` and
 `POST /analyse` on the Stockfish evaluator. Those are not the user game. Do not
 treat a passing upload or evaluator response as proof that a round works.
 
-This skill is the definition of done for the head-to-head target round in `docs/design/head-to-head-target-round.md`. The current checkout still ships dartboard-wedge chess. Doctor reports which build is present. Drive a mapped feature only if its preconditions match that report. Do not call the old opening-band / wedge-target path a pass for a new-round feature.
+This skill is the definition of done for the head-to-head target round in
+`docs/design/head-to-head-target-round.md`. Doctor must report
+`implementation: head-to-head` before any drive.
 
 ## Launch
 
@@ -28,23 +30,13 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
 
 That process exits. There is no server to keep alive. Each drive starts a new in-process game, feeds `handle_button` / `handle_hit` the same way [`input_adapter.py`](games/pixeldarts_chess_128_160/input_adapter.py) does after it normalizes emulator or board events, and writes frames plus a log.
 
-Emulator (real user path, needs Tkinter and a display):
+The upstream Dartsnut emulator is now a pnpm/Electron monorepo. The old
+`emulator.py`/Tk launch path no longer exists. Follow that repository's current
+README for a full GUI-emulator pass. For routine Cloud verification, use the
+process-level shared-memory recorder documented below; it runs the same
+`pydartsnut` boundary without cloning the emulator repository.
 
-```bash
-git clone https://github.com/Dartsnut/dartsnut_emulator.git /tmp/dartsnut_emulator-$RUN_ID
-cd /tmp/dartsnut_emulator-$RUN_ID
-python3 -m venv .venv
-.venv/bin/pip install -r requirement.txt
-.venv/bin/python emulator.py \
-  --path /absolute/path/to/games/pixeldarts_chess_128_160 \
-  --params '{"debug": true, "debug_overlay": false}'
-```
-
-Ready when the Tk window shows the 128x160 game. Mouse left-click is a dart at panel coordinates. `K` is A, `L` is B, `P` writes a screenshot under the emulator `capture/` folder. Copy those captures into the evidence directory; do not treat emulator `capture/` as the kept proof location.
-
-Do not point two verification runs at the same emulator window. Do not upload to `192.168.1.250` from a verification run unless the user asked for a hardware pass.
-
-Teardown: if you started an emulator, kill that process by PID. Leave `artifacts/verify-pixeldarts-chess/` in place.
+Do not upload to `192.168.1.250` unless the user asks for a hardware pass.
 
 ## Doctor
 
@@ -58,8 +50,9 @@ It checks:
 
 - `games/pixeldarts_chess_128_160/conf.json` exists, `type` is `game`, size is 128x160.
 - `python3 -m py_compile` of `main.py` and present game modules.
-- `python3 -m unittest tests/test_pixeldarts_chess.py tests/test_engine_client.py`.
-- Which coordinator is importable: `match.Match` (head-to-head) or `chess_game.PixelDartsChessGame` (dartboard beta).
+- Unit tests for match, target round, continuation planner, engine client, and
+  evaluator service.
+- Whether `match.Match` is present.
 - Whether `minigame` exists without importing `chess`.
 
 `implementation` must be `head-to-head`.
@@ -74,7 +67,9 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
   --out artifacts/verify-pixeldarts-chess/<feature-id>
 ```
 
-Feature ids match the map files: `start-match`, `player-one-set-score`, `player-two-chase`, `continuation-and-animation`, `three-round-match`, `sudden-death`.
+Feature ids match the map files: `start-match`, `player-one-set-score`,
+`player-two-chase`, `continuation-and-animation`, `three-round-match`,
+`sudden-death`, and `game-over`.
 
 The helper exits nonzero when a driven feature does not reach its required state.
 
@@ -104,17 +99,19 @@ Emulator drive, when a display is available:
 
 - Start from title.
 - A / `K` advances intros and holds.
-- B / `L` resets the match after implementation.
 - Click inside a target circle, not the label plate.
 - Coordinates are panel pixels, origin top-left of the 128x160 frame. Hits with `y >= 128` are strip clicks and must score zero.
 
 Stable handles (assert these, not pixel art details):
 
-- Scene names from the game object / debug overlay: `title`, `board`, `shooting`, `thinking`, `round_result`, `move_animation`, `sudden_death`, and whatever scene names the post-round-3 mechanic uses.
-- Round index in the strip or debug overlay: at least `R1`, `R2`, `R3` before the late mechanic.
-- Strip text: `P1`, `P2`, `BEAT`, `NEED`, score integers.
-- Target labels: `1`–`20` and center `B`.
-- Result copy: `SLIGHT EDGE`, `CLEAR EDGE`, `STRONG EDGE`, `STRONGEST EDGE`, or a tie path into sudden death.
+- Scene names: `title`, `turn_intro`, `targets`, `sudden_death`,
+  `round_result`, `thinking`, `continuation`, `board_hold`,
+  `checkmate_unlocked`, and `game_over`.
+- Round index in the strip: `ROUND 1`, `ROUND 2`, `ROUND 3`, then the unlock.
+- Strip text: chess color, score, darts, `BEAT`, `NEED`, and `A NEXT`.
+- Target labels: eight unique values from `1`–`20` and center `25`.
+- Result copy: `BALANCED`, `SMALL 40CP`, `CLEAR 100CP`,
+  `STRONG 200CP`, or `DOMINANT 350CP`.
 
 Do not call engine internals, do not `board.push` a canned line, and do not overwrite `white_expectation` to fake a percentage. The continuation must come from the game after both scores exist.
 
@@ -132,7 +129,11 @@ Standards:
 
 - Exercise the real input path (`handle_hit` / `handle_button` or emulator mouse/keys), not test-only setters that skip scoring.
 - Capture the throw and the score change, not only the final chessboard.
-- If Stockfish is absent, the material fallback is allowed; record `evaluator` in `summary.json`. The shown win percent must still come from that evaluator after the line, not from the dart score.
+- Record `evaluator` in `summary.json`: `canned-continuation-fixture`,
+  `material-fallback`, `local-stockfish`, or `homelab-http`.
+- If Stockfish is absent, the material fallback is allowed. The shown win
+  percent must still come from that evaluator after the line, not from the dart
+  score.
 - A dry-run upload is not game proof.
 
 ## Cleanup
@@ -149,6 +150,7 @@ Kills only the PID in that file. Does not delete `artifacts/verify-pixeldarts-ch
 | --- | --- |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/doctor.py` | Readiness JSON |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py --feature start-match --out DIR` | One feature |
+| `python3 .cursor/skills/verify-pixeldarts-chess/helpers/record_gameplay.py --python PYTHON --out DIR` | Real process/framebuffer recording |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/cleanup.py --pid-file FILE` | Emulator teardown |
 
 Read `features/README.md` before driving. One convenient entry point is incomplete when the map lists others.

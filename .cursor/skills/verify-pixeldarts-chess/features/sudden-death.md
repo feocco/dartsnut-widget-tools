@@ -12,7 +12,7 @@ Equal shooting scores do not pick a random chess line. Both players get one dart
 ## How to get to it (user POV)
 
 - Finish a round  with equal totals (force it in headless with scripted hits).
-- Throw one dart when the three-target or nine-target sudden-death grid appears.
+- Throw one dart when the nine-target sudden-death grid appears.
 - Hand the same grid to the other player for their one dart.
 
 ## Driving it with drive_headless
@@ -20,13 +20,18 @@ Equal shooting scores do not pick a random chess line. Both players get one dart
 Preconditions:
 
 - `implementation` is `head-to-head`.
-- Helper can force equal P1/P2 scores (same three cells, or `--force-tie`).
+- The helper scripts equal scores through the public hit path.
 
-- **Enter.** After P2's third dart, scene is `sudden_death`, not `round_result` with a coin-flip line.
-- **Layout.** Render `40_sd_p1.png`. Values differ from the round grid. P2 later sees the same values (`41_sd_p2.png`).
+- **Enter.** After the second color's third dart, scene is `turn_intro` for
+  one-dart sudden death; A reaches `sudden_death`.
+- **Layout.** Render `40_sudden_death.png`. Values differ from the round grid,
+  and both colors receive that same layout.
 - **One dart.** After one hit, that player cannot throw again. Second player throws once.
 - **Unequal.** Higher sudden-death score proceeds to [score becomes chess](./continuation-and-animation.md).
-- **Proof.** `summary.json` has `round_tied: true`, `sd_p1`, `sd_p2`, two seeds (`round_seed != sd_seed` unless documented otherwise).
+- **Repeat.** Script a 0–0 sudden-death tie, then capture the new grid in
+  `41_repeat_sudden_death.png`. Its seed differs from both prior grids.
+- **Proof.** `summary.json` has `round_tied: true`, `round_seed`, two distinct
+  `sudden_seeds`, final `sd_scores`, and `darts_per_player: 1`.
 
 ## Gotchas
 

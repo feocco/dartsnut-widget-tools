@@ -4,7 +4,9 @@ After both players finish, the score margin requests a legal three-full-move (si
 
 ## Sub-features
 
-- `result-margin` shows both scores and an edge band (`SLIGHT` / `CLEAR` / `STRONG` / `STRONGEST`) or a tie routed to sudden death instead.
+- `result-margin` shows both scores and a loss band (`SMALL 40CP`,
+  `CLEAR 100CP`, `STRONG 200CP`, or `DOMINANT 350CP`) or routes a tie to
+  sudden death.
 - `legal-line` is six legal plies from the position that started the round.
 - `animation` plays each ply on the chessboard.
 - `real-eval` updates the displayed percent from the evaluator's after-position WDL.
@@ -24,7 +26,9 @@ Preconditions:
 
 - **Result.** Scene `round_result` (or equivalent). Frame `30_result.png` shows P1 and P2 totals and a winner. No chess move is required from the user.
 - **Thinking.** Scene may be `thinking` while a line is chosen. Do not inject UCI.
-- **Animation.** Scene `move_animation` or a sequence of board frames. `summary.json` lists `moves_san` length 6 (or 6 ply). Replaying those moves from the start FEN is legal.
+- **Animation.** Scene `continuation` advances a sequence of board frames.
+  `summary.json` lists `moves_san` length 6. Replaying those moves from the
+  start FEN is legal.
 - **Rest.** After the final ply, scene is `board_hold`. The final position and
   evaluator bar remain visible indefinitely with `A NEXT`; only button A may
   begin the next round.

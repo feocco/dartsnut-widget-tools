@@ -26,7 +26,8 @@ Preconditions:
 - **Confirm restore.** Render `20_chase_hud.png`. The eight numbers and bull match
   the first shooter's opening grid. Strip contains `BEAT` and `S`.
 - **Need line.** `NEED` equals `S + 1` minus current P2 score, floored at 0 once P2 is strictly ahead. No extra glow on a single target.
-- **Hit.** Score one target. `NEED` updates. Frame `21_after_p2_hit.png`.
+- **Hit.** Score one target. `NEED` decreases by its value. Frame
+  `21_after_hit.png`. Finish the turn and capture `22_result.png`.
 - **Proof.** `summary.json` includes `p1_score`, `p2_score`, `beat`, `need`, and `layout_p1 == layout_p2`.
 
 ## Gotchas

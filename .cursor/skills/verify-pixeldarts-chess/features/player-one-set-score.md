@@ -6,7 +6,8 @@ Player one throws three darts at a 3x3 grid of shared values. Hits add the print
 
 - `grid-seeded` shows eight unique values from 1–20 plus center bull `B` at 25.
 - `hit-scores` adds the target value on a hit inside the circle.
-- `hit-removes` leaves that cell empty for the rest of player one's turn.
+- `hit-removes` replaces that cell with a yellow shot mark for the rest of the
+  first shooter's turn.
 - `miss-zero` scores 0 for empty cells, strip clicks (`y >= 128`), and gaps between targets.
 - `three-darts` ends player one's turn after three throws, including misses.
 
@@ -22,7 +23,7 @@ Preconditions:
 
 - `implementation` is `head-to-head`.
 - Scene is `targets`, active player is the round's first chess color.
-- Known seed if the helper exposes `--seed` so expected values are deterministic.
+- The helper uses deterministic round seed `7001`.
 
 - **Read the grid.** Render `10_player_one_start.png`. Record the nine values and centers from the game object.
 - **Hit a high value.** `handle_hit(cx, cy)` on a non-bull target center. Score increases by that value. Cell is empty. Frame `11_after_hit.png`.
