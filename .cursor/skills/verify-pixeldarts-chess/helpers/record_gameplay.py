@@ -128,6 +128,7 @@ def play_round(host: Host, scoring_cells) -> None:
     host.pump(1.2)
     host.press("a")
     host.pump(7.5)
+    host.press("a")
 
 
 def main() -> int:

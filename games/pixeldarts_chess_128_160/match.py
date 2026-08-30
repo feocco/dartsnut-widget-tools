@@ -24,7 +24,6 @@ class MatchPhase(str, Enum):
 class Match:
     INTRO_SECONDS = 1.5
     PLY_SECONDS = 0.55
-    BOARD_HOLD_SECONDS = 1.0
     UNLOCK_SECONDS = 1.5
 
     def __init__(self, evaluator=None, now=0, logger=None, seed_source=None):
@@ -129,6 +128,9 @@ class Match:
         if self.phase == MatchPhase.RESULT:
             self.set_phase(MatchPhase.THINKING, now)
             return True
+        if self.phase == MatchPhase.BOARD_HOLD:
+            self.advance_round(now)
+            return True
         if self.phase == MatchPhase.GAME_OVER:
             self.reset(now)
             return True
@@ -224,9 +226,6 @@ class Match:
             return True
         if self.phase == MatchPhase.CONTINUATION and now - self.scene_started >= self.PLY_SECONDS:
             self.advance_continuation(now)
-            return True
-        if self.phase == MatchPhase.BOARD_HOLD and now - self.scene_started >= self.BOARD_HOLD_SECONDS:
-            self.advance_round(now)
             return True
         if self.phase == MatchPhase.CHECKMATE_UNLOCKED and now - self.scene_started >= self.UNLOCK_SECONDS:
             self.start_round(now)

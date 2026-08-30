@@ -216,12 +216,7 @@ class Renderer:
                 (f"NEED {game.points_needed}" if game.chase_active else "HIT TARGET", GREEN),
             ]
         elif game.scene in ("continuation", "board_hold"):
-            rows = [
-                (f"ROUND {game.round_number}", GOLD),
-                (f"PLY {game.continuation_index}/{len(game.continuation.moves_uci)}", WHITE),
-                (f"W {int(game.white_expectation * 100)}%", BLUE),
-                (game.current_ply_san or "BOARD HOLD", GREEN),
-            ]
+            rows = self.board_rows(game)
         else:
             rows = [
                 (f"ROUND {game.round_number}", GOLD),
@@ -231,6 +226,14 @@ class Renderer:
             ]
         for index, (text, fill) in enumerate(rows):
             draw.text((3, 128 + index * 8), text[:11], font=FONT_TINY, fill=fill, stroke_width=1, stroke_fill=BLACK)
+
+    def board_rows(self, game):
+        return [
+            (f"ROUND {game.round_number}", GOLD),
+            (f"PLY {game.continuation_index}/{len(game.continuation.moves_uci)}", WHITE),
+            (f"W {int(game.white_expectation * 100)}%", BLUE),
+            ("A NEXT" if game.scene == "board_hold" else game.current_ply_san, GREEN),
+        ]
 
     @staticmethod
     def band_name(margin):
