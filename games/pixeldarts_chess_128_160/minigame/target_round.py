@@ -53,10 +53,11 @@ class RoundResult:
 class TargetRound:
     DARTS_PER_PLAYER = 3
 
-    def __init__(self, seed: int, first_shooter: str = "white"):
+    def __init__(self, seed: int, first_shooter: str = "white", darts_per_player: int = 3):
         if first_shooter not in ("white", "black"):
             raise ValueError("first_shooter must be white or black")
         self.seed = int(seed)
+        self.darts_per_player = int(darts_per_player)
         self.first_shooter = first_shooter
         self.shooter_order = (first_shooter, self.other_color(first_shooter))
         self.cells = self._build_cells(self.seed)
@@ -85,7 +86,7 @@ class TargetRound:
         return sum(sorted((cell.value for cell in self.cells), reverse=True)[:3])
 
     def remaining_darts(self, color: str) -> int:
-        return max(0, self.DARTS_PER_PLAYER - self.darts_thrown[color])
+        return max(0, self.darts_per_player - self.darts_thrown[color])
 
     def active_color(self) -> str | None:
         for color in self.shooter_order:
