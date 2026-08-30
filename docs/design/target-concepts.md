@@ -46,8 +46,10 @@ commits. That drops the engine from move selection entirely and turns the game
 into real chess where the darts are the input device.
 
 Cost: the four destinations cluster wherever the position is sharp, and the
-mockup shows the honest worst case, with `a6` and `b5` one square apart.
-Snapping papers over it, but two adjacent candidates will always be a coin flip.
+mockup shows that honestly, with `Nf6`, `Bd6`, and `Nce7` all within one square
+of each other. Snapping papers over it but does not fix it. See
+[live-board-targeting.md](live-board-targeting.md) for how bad the clustering
+gets and what actually resolves it.
 
 ### 2 - The climb
 
@@ -123,7 +125,7 @@ whether a throw is fair; area alone is misleading for thin shapes.
 | --- | --- | --- | --- |
 | current dartboard | 28% | 18.0px | 18.0px |
 | 1 live board, literal squares | 5% | 8.0px | 8.0px |
-| 1 live board, 20px snap | 20% | 17.0px | 16.4px |
+| 1 live board, 20px snap | 19% | 11.2px | 16.4px |
 | 2 the climb | 56% | 12.0px | 20.0px |
 | 3 constellation, literal orbs | 11% | 8.4px | 19.2px |
 | 3 constellation, 22px snap | 30% | 22.0px | 22.0px |
@@ -134,7 +136,10 @@ Three things fall out of this.
 
 Drawn hitboxes are too small. Live board, constellation, and duel all land at
 7-8.4px of slack on the best move, less than half of today's 18px. Any of them
-needs bounded nearest-target resolution to be throwable.
+needs bounded nearest-target resolution to be throwable. Snapping rescues the
+constellation and the duel, whose target positions we choose, but only partly
+rescues the live board, whose target positions the chess position chooses for
+us.
 
 Bounded snapping is the right primitive, and it belongs in `dartboard.py`
 alongside `classify_dartboard_hit()`. Resolving to the nearest target within a

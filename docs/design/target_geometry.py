@@ -13,6 +13,7 @@ Usage:
 """
 
 import math
+import random
 import sys
 from pathlib import Path
 
@@ -30,6 +31,13 @@ from render_concepts import (  # noqa: E402
     ORBS,
     TARGETS,
     view_cell,
+)
+from render_targeting import (  # noqa: E402
+    anamorphic_hit,
+    heatmap_hit,
+    rank_all_moves,
+    territory_hit,
+    zoom_hit,
 )
 
 WIDTH, HEIGHT = 128, 160
@@ -87,7 +95,8 @@ def measure(name, hit_test, note=""):
         rows.append((quality, area, slack))
 
     total = sum(row[1] for row in rows)
-    worst = min((row[2] for row in rows), default=0.0)
+    # Skip qualities that are absent, e.g. a candidate outside a zoomed quadrant.
+    worst = min((row[2] for row in rows if row[1]), default=0.0)
     return {"name": name, "rows": rows, "total": total, "worst": worst, "note": note}
 
 
@@ -161,11 +170,149 @@ def nearest_of(points, radius=BIG):
     return hit_test
 
 
+def sample_positions(count, seed=11, min_ply=4, max_ply=40):
+    """Random legal games, sampled mid-play, as a stand-in for real sessions."""
+    rng = random.Random(seed)
+    positions = []
+    while len(positions) < count:
+        board = chess.Board()
+        target_ply = rng.randrange(min_ply, max_ply)
+        for _ in range(target_ply):
+            moves = list(board.legal_moves)
+            if not moves:
+                break
+            board.push(rng.choice(moves))
+        if board.is_game_over() or len(list(board.legal_moves)) < 8:
+            continue
+        positions.append(board.copy())
+    return positions
+
+
+def pick_one_per_bucket(ranked):
+    chosen = {}
+    for entry in ranked:
+        chosen.setdefault(entry["quality"], entry)
+    return chosen
+
+
+def clustering_survey(count=150, snap_radius=20):
+    """How far apart are the chosen destinations in practice?
+
+    Snapping only works when candidates sit far enough apart that a throw
+    cannot end up closer to the wrong one. Two candidates within
+    2 * snap_radius share a boundary a throw can fall across, and two moves
+    landing on the same square cannot be told apart by position at all.
+    """
+    distances = []
+    buckets_seen = []
+    for board in sample_positions(count):
+        ranked = rank_all_moves(board, depth=1)
+        chosen = pick_one_per_bucket(ranked)
+        if len(chosen) < 3:
+            continue
+        buckets_seen.append(len(chosen))
+        centers = []
+        for entry in chosen.values():
+            col, row = view_cell(chess.square_name(entry["move"].to_square))
+            centers.append((col * 16 + 8, row * 16 + 8))
+        pairs = [
+            math.hypot(a[0] - b[0], a[1] - b[1])
+            for index, a in enumerate(centers)
+            for b in centers[index + 1:]
+        ]
+        distances.append(min(pairs))
+
+    distances.sort()
+    total = len(distances)
+    median = distances[total // 2]
+    shared = sum(1 for d in distances if d == 0)
+    contested = sum(1 for d in distances if 0 < d <= 2 * snap_radius)
+    tight = sum(1 for d in distances if 0 < d <= 24)
+    mean_buckets = sum(buckets_seen) / len(buckets_seen)
+
+    def share(value):
+        return f"{value}/{total} ({100 * value / total:.0f}%)"
+
+    print()
+    print(f"clustering survey over {total} random positions, {mean_buckets:.1f} candidates each")
+    print(f"  closest pair of candidates, median       {median:.1f}px")
+    print(f"  closest pair, min / max                  {distances[0]:.1f}px / {distances[-1]:.1f}px")
+    print(f"  two candidates on the same square        {share(shared)}")
+    print(f"  two candidates on adjacent squares       {share(tight)}")
+    print(f"  two candidates within snap range ({2 * snap_radius}px)  {share(contested)}")
+
+
+def destination_center(move):
+    col, row = view_cell(chess.square_name(move.to_square))
+    return col * 16 + 8, row * 16 + 8
+
+
+def separated_pick(ranked, min_separation):
+    """Best move per bucket subject to a minimum spacing between destinations."""
+    chosen, centers = {}, []
+    for quality in QUALITIES:
+        for entry in ranked:
+            if entry["quality"] != quality:
+                continue
+            center = destination_center(entry["move"])
+            if all(math.hypot(center[0] - c[0], center[1] - c[1]) >= min_separation
+                   for c in centers):
+                chosen[quality] = entry
+                centers.append(center)
+                break
+    return chosen
+
+
+def separation_cost_survey(count=150, min_separation=32):
+    """What does it cost to force the four candidates apart on the board?"""
+    added_costs = []
+    unfillable = 0
+    bucket_total = 0
+    for board in sample_positions(count):
+        ranked = rank_all_moves(board, depth=1)
+        free = pick_one_per_bucket(ranked)
+        if len(free) < 3:
+            continue
+        forced = separated_pick(ranked, min_separation)
+        bucket_total += len(free)
+        unfillable += len(free) - len(forced)
+        # Clamp so a single forced-mate substitution does not dominate the mean.
+        cost = sum(
+            min(forced[quality]["loss"], 2000) - min(free[quality]["loss"], 2000)
+            for quality in free
+            if quality in forced
+        )
+        added_costs.append(cost)
+
+    added_costs.sort()
+    total = len(added_costs)
+
+    def percentile(fraction):
+        return added_costs[min(total - 1, int(total * fraction))]
+
+    clean = sum(1 for cost in added_costs if cost == 0)
+    costly = sum(1 for cost in added_costs if cost > 100)
+    print()
+    print(f"forcing {min_separation}px between destinations, {total} positions")
+    print(f"  buckets with no legal separated move    {unfillable}/{bucket_total} "
+          f"({100 * unfillable / bucket_total:.0f}%)")
+    print(f"  positions needing no substitution       {clean}/{total} "
+          f"({100 * clean / total:.0f}%)")
+    print(f"  positions losing more than a pawn       {costly}/{total} "
+          f"({100 * costly / total:.0f}%)")
+    print(f"  added centipawn cost, median / p75 / p90 "
+          f"{percentile(0.5)} / {percentile(0.75)} / {percentile(0.9)}")
+
+
 def main():
     reports = [
         measure("current dartboard", current_board, "wedges, bottom 32px unusable"),
-        measure("1 live board (literal squares)", live_board_literal, "16px squares, no assist"),
-        measure("1 live board (20px snap)", live_board_snapped, "snap to nearest destination"),
+        measure("1a live board (literal squares)", live_board_literal, "16px squares, no assist"),
+        measure("1a live board (20px snap)", live_board_snapped, "snap to nearest destination"),
+        measure("1b drawn territory", territory_hit, "board partitioned among 4 candidates"),
+        measure("1c stretched grid", anamorphic_hit, "live files and ranks widen, no snap"),
+        measure("1d every legal move", heatmap_hit, "18 destination squares, nearest wins"),
+        measure("1e zoomed quadrant", zoom_hit, "dart 2 only, 3 of 4 candidates in view"),
         measure("2 the climb", climb, "platform = hitbox, gaps are misses"),
         measure("3 constellation (literal orbs)", constellation, "orbs also drift between frames"),
         measure(
@@ -203,6 +350,8 @@ def main():
     print("px = target area, r = slack radius (largest circle that fits inside that target)")
     for report in reports:
         print(f"  {report['name']:<32} {report['note']}")
+    clustering_survey()
+    separation_cost_survey()
 
 
 if __name__ == "__main__":
