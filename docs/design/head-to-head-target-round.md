@@ -236,6 +236,7 @@ a generated raster. Kenney is the right starting asset for this version.
 - Restore the exact same seeded grid for player two.
 - Show player two the score to beat and points needed.
 - Alternate who shoots first each round.
+- A match plays at least three full rounds before the late-match mechanic unlocks.
 - Resolve ties with one-dart sudden death.
 - Compete for three full chess moves, six plies.
 - Show the actual engine percentage after selecting the legal line.
@@ -249,6 +250,7 @@ a generated raster. Kenney is the right starting asset for this version.
 - Whether the bull should remain 25 or move to 50.
 - Whether a registered bounce-out still counts.
 - How long the result and six-ply animation should take.
+- What the late-match mechanic is after round 3, and how it shows on the 128x160 panel.
 
 The largest design risk is repetition. With equal-size normal targets, players
 will usually throw at the three highest values. Random placement changes where

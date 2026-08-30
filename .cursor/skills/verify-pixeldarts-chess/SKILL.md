@@ -1,6 +1,6 @@
 ---
 name: verify-pixeldarts-chess
-description: Verify PixelDarts Chess on the 128x160 emulator and the headless hit/button harness. Use when proving title start, a head-to-head target round, the chase HUD, sudden death, or the six-ply chess animation.
+description: Verify PixelDarts Chess on the 128x160 emulator and the headless hit/button harness. Use when proving title start, a head-to-head target round, a three-round match, the chase HUD, sudden death, or the six-ply chess animation.
 ---
 
 # Verify PixelDarts Chess
@@ -72,7 +72,7 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
   --out artifacts/verify-pixeldarts-chess/<feature-id>
 ```
 
-Feature ids match the map files: `start-match`, `player-one-set-score`, `player-two-chase`, `continuation-and-animation`, `sudden-death`.
+Feature ids match the map files: `start-match`, `player-one-set-score`, `player-two-chase`, `continuation-and-animation`, `three-round-match`, `sudden-death`.
 
 The helper refuses a feature whose required implementation is not present. That refusal is not a pass.
 
@@ -86,7 +86,8 @@ Emulator drive, when a display is available:
 
 Stable handles (assert these, not pixel art details):
 
-- Scene names from the game object / debug overlay: `title`, `board`, `shooting`, `thinking`, `round_result`, `move_animation`, `sudden_death`.
+- Scene names from the game object / debug overlay: `title`, `board`, `shooting`, `thinking`, `round_result`, `move_animation`, `sudden_death`, and whatever scene names the post-round-3 mechanic uses.
+- Round index in the strip or debug overlay: at least `R1`, `R2`, `R3` before the late mechanic.
 - Strip text: `P1`, `P2`, `BEAT`, `NEED`, score integers.
 - Target labels: `1`–`20` and center `B`.
 - Result copy: `SLIGHT EDGE`, `CLEAR EDGE`, `STRONG EDGE`, `STRONGEST EDGE`, or a tie path into sudden death.
@@ -130,4 +131,4 @@ Read `features/README.md` before driving. One convenient entry point is incomple
 
 ## After implementation
 
-When `doctor.py` reports `head-to-head`, run `start-match` plus `player-one-set-score` at minimum before calling the new game done. `player-two-chase` and `continuation-and-animation` are the rest of the happy path. `sudden-death` is required for ties, not for a first green build.
+When `doctor.py` reports `head-to-head`, a first green build still requires `three-round-match`, not only a single continuation. `start-match`, `player-one-set-score`, `player-two-chase`, and `continuation-and-animation` are the pieces inside each round. `sudden-death` is required for ties, not for a first green build.

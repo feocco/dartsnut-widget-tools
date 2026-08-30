@@ -35,9 +35,12 @@ Each file: H1, one paragraph, then `Sub-features`, `How to get to it (user POV)`
 - [Start a match](./start-match.md) — title, A, first playable scene.
 - [Player one sets the score](./player-one-set-score.md) — three darts, visible total, grid depletes.
 - [Player two chases](./player-two-chase.md) — same layout, `BEAT` / `NEED`, no cheapest-target highlight.
-- [Score becomes chess](./continuation-and-animation.md) — margin, legal six-ply line, animated pieces, real eval.
+- [Score becomes chess](./continuation-and-animation.md) — one round's margin, legal six-ply line, animated pieces, real eval.
+- [Three-round match](./three-round-match.md) — three full rounds, swapped first shooter, mechanic after round 3.
 - [Sudden death](./sudden-death.md) — tied scores, one dart each, new shared grid.
+
+A green `continuation-and-animation` on round 1 is not a match pass. Drive `three-round-match` before calling the game done.
 
 ## Optional (not in this map yet)
 
-Ask before adding: hardware upload, first-player swap across rounds, checkmate/game-over, Stockfish-vs-fallback labeling, debug overlay, bounce-out rejection, B-reset mid-round, extra minigames.
+Ask before adding: hardware upload, checkmate/game-over, Stockfish-vs-fallback labeling, debug overlay, bounce-out rejection, B-reset mid-round, extra minigames.

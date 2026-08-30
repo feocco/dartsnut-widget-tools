@@ -19,6 +19,7 @@ FEATURES_NEEDING_HEAD_TO_HEAD = {
     "player-one-set-score",
     "player-two-chase",
     "continuation-and-animation",
+    "three-round-match",
     "sudden-death",
 }
 

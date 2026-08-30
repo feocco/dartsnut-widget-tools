@@ -31,5 +31,5 @@ Preconditions:
 ## Gotchas
 
 - Showing P1's hit locations to P2 is a fail. Only the total is allowed.
-- Alternating who shoots first is a later round; this feature is a single chase.
+- Alternating who shoots first is [three-round match](./three-round-match.md) round 2, not this file.
 - If the helper highlights the cheapest win, that is a product bug relative to `docs/design/head-to-head-target-round.md`.
