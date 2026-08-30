@@ -5,9 +5,9 @@ import time
 
 from pydartsnut import Dartsnut
 
-from chess_game import PixelDartsChessGame
 from frame_pump import FramePump
 from input_adapter import DartsnutInputAdapter
+from match import Match
 from rendering import Renderer
 
 
@@ -45,7 +45,7 @@ def log(message):
 
 
 dartsnut = Dartsnut()
-game = PixelDartsChessGame(logger=log)
+game = Match(logger=log)
 game.debug_overlay_enabled = DEBUG_OVERLAY
 renderer = Renderer()
 input_adapter = DartsnutInputAdapter(dartsnut, logger=log)

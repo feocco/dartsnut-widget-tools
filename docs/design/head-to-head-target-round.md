@@ -10,10 +10,10 @@ moves. White shoots first in one round, Black shoots first in the next. The
 second player sees the first player's final score and the score needed to win.
 That pressure is intentional.
 
-After both players finish, the score margin asks the chess engine for a legal
-six-ply continuation that favors the round winner. The game animates the pieces
-through that line and shows the actual engine win percentage before and after.
-The minigame never invents a win percentage.
+After both players finish, the score margin asks the
+[continuation planner](../continuation-planner.md) for a legal line of up to six
+plies. The game animates that line and shows the evaluator's actual expectation
+before and after. The minigame never invents an evaluation.
 
 ![Head-to-head round flow](images/20_head_to_head_flow.png)
 
@@ -48,7 +48,7 @@ The total available score changes between rounds because the values change.
 Chess advantage therefore uses normalized margin:
 
 ```text
-margin = abs(player_1_score - player_2_score) / maximum_score_on_this_grid
+margin = abs(player_1_score - player_2_score) / maximum_possible_score
 ```
 
 This lets a 12-point lead mean more on a low-value grid than on a high-value
@@ -86,15 +86,12 @@ The score margin selects an advantage band. It does not select moves directly.
 | 25% to 40% | strong edge |
 | above 40% | strongest allowed edge |
 
-The chess engine searches legal six-ply continuations, scores the resulting
-positions, and returns the line closest to the requested result. The response
-includes the actual win-draw-loss probabilities. Those are the numbers the UI
-shows.
-
-The engine also needs a quality floor. Without one, a large shooting win can
-produce absurd chess where a queen hangs for no reason. The exact floor remains
-open for tuning. It should cap how much evaluation any single animated move can
-lose.
+The continuation planner performs one MultiPV search per ply. Winner plies take
+the best allowed candidate. Loser plies choose the returned candidate whose
+centipawn loss is closest to the target for the normalized-margin band. The
+exact bands and mate policy are defined in
+[`docs/continuation-planner.md`](../continuation-planner.md); this document does
+not define a second search strategy.
 
 Three full moves means six plies. Calling three plies "three moves" gives one
 side two turns and the other only one.
@@ -162,7 +159,8 @@ ContinuationRequest
   favored_color
   normalized_margin
   full_moves = 3
-  move_quality_floor
+  round_number
+  max_plies = 6
 ```
 
 It returns:
@@ -174,8 +172,8 @@ Continuation
   moves_san
   before_wdl
   after_wdl
-  achieved_margin
-  selection_reason
+  loss_target_cp
+  ply_trace
 ```
 
 It does not know which minigame produced the request.
@@ -245,12 +243,9 @@ a generated raster. Kenney is the right starting asset for this version.
 ## Still open before implementation planning
 
 - Whether player two gets a visual hint for the cheapest winning target.
-- The exact margin bands after playtesting.
-- The chess move-quality floor.
 - Whether the bull should remain 25 or move to 50.
 - Whether a registered bounce-out still counts.
 - How long the result and six-ply animation should take.
-- What the late-match mechanic is after round 3, and how it shows on the 128x160 panel.
 
 The largest design risk is repetition. With equal-size normal targets, players
 will usually throw at the three highest values. Random placement changes where
