@@ -10,6 +10,9 @@ This repo currently contains:
 - `scripts/upload_app.py` - uploads either a widget or a PixelDart game.
 - `docs/dartsnut-websocket-upload.md` - short notes on the upload flow and emulator setup.
 
+The active PixelDarts Chess replacement is specified as executable `/goal`
+slices in [docs/design/head-to-head-goals.md](docs/design/head-to-head-goals.md).
+
 Clone it on another machine:
 
 ```bash
