@@ -74,6 +74,9 @@ fixtures, so it does not confuse fallback output with live Stockfish evidence.
 - Checkmate is filtered in rounds 1–3. `CHECKMATE UNLOCKED` appears before
   round 4, where mate candidates become legal.
 
+Target and shot-mark art comes from Kenney's CC0 Shooting Gallery pack; the
+pack license is kept in `docs/design/assets/kenney-shooting-gallery/`.
+
 ### PixelDarts Chess Preview
 
 Generate current frames with:

@@ -110,11 +110,24 @@ class ContinuationPlannerTests(unittest.TestCase):
         self.assertEqual(chess.Board(continuation.final_fen).fullmove_number, 4)
 
     def test_terminal_position_stops_without_call_or_padding(self):
-        fixture = load_analyse_fixture("terminal_stalemate.json")
-        analyser = FakeAnalyser(fixture)
-        continuation = ContinuationPlanner(analyser).plan(self.request(fixture, 0.2, max_plies=6))
-        self.assertEqual(analyser.calls, [])
-        self.assertEqual(continuation.moves_uci, ())
+        for name in ("terminal_stalemate.json", "terminal_checkmate.json"):
+            with self.subTest(name=name):
+                fixture = load_analyse_fixture(name)
+                analyser = FakeAnalyser(fixture)
+                continuation = ContinuationPlanner(analyser).plan(self.request(fixture, 0.2, max_plies=6))
+                self.assertEqual(analyser.calls, [])
+                self.assertEqual(continuation.moves_uci, ())
+
+    def test_mate_during_line_stops_before_six_calls(self):
+        analyser = FakeAnalyser.from_script("early_terminal_script.json")
+        request = ContinuationRequest(chess.STARTING_FEN, "black", 0.5, 4, max_plies=6)
+
+        continuation = ContinuationPlanner(analyser).plan(request)
+
+        self.assertEqual(len(analyser.calls), 4)
+        self.assertLess(len(continuation.moves_uci), 6)
+        self.assertEqual(continuation.moves_san[-1], "Qh4#")
+        self.assertTrue(chess.Board(continuation.final_fen).is_checkmate())
 
     def test_suite_does_not_need_live_stockfish(self):
         self.assertFalse(os.environ.get("STOCKFISH_API_URL"))

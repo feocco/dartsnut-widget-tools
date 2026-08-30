@@ -51,7 +51,7 @@ class Renderer:
         elif scene == "turn_intro":
             self.render_intro(img, draw, game)
         elif scene in ("targets", "sudden_death"):
-            self.render_targets(draw, game)
+            self.render_targets(img, draw, game)
         elif scene == "round_result":
             self.render_result(draw, game)
         elif scene == "thinking":
@@ -82,24 +82,38 @@ class Renderer:
         self.center(draw, 67, game.cutscene_title.upper(), FONT_MED, color)
         self.center(draw, 89, game.cutscene_subtitle.upper(), FONT_SMALL, WHITE)
 
-    def render_targets(self, draw, game):
+    def render_targets(self, img, draw, game):
         round_ = game.target_round
-        color = BLUE if game.active_color == "white" else RED
         draw.rectangle((0, 0, 127, 127), fill=(8, 10, 18))
         removed = round_.removed[game.active_color]
         for cell in round_.cells:
-            x, y = cell.center
-            radius = cell.radius
+            size = cell.radius * 2 + 1
             if cell.index in removed:
-                draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(20, 24, 30), outline=DIM)
-                draw.line((x - 5, y - 5, x + 5, y + 5), fill=RED, width=2)
-                draw.line((x + 5, y - 5, x - 5, y + 5), fill=RED, width=2)
+                self.paste_sprite(img, "shot_yellow_large", cell.center, min(size, 15))
                 continue
-            draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=WHITE, outline=color, width=2)
-            draw.ellipse((x - radius + 4, y - radius + 4, x + radius - 4, y + radius - 4), outline=GOLD, width=2)
-            text = str(cell.value)
-            width, height = self.text_size(draw, text, FONT_MED)
-            draw.text((x - width // 2, y - height // 2 - 1), text, font=FONT_MED, fill=BLACK)
+            self.paste_sprite(img, "target_colored_outline", cell.center, size)
+            self.draw_target_value(draw, cell)
+
+    def paste_sprite(self, img, key, center, size):
+        sprite = self.assets.image(key)
+        if sprite is None:
+            return False
+        sprite = sprite.resize((size, size), Image.Resampling.LANCZOS)
+        img.paste(sprite, (center[0] - size // 2, center[1] - size // 2), sprite)
+        return True
+
+    def draw_target_value(self, draw, cell):
+        font = FONT_SMALL if cell.radius > 12 else FONT_TINY
+        text = str(cell.value)
+        width, height = self.text_size(draw, text, font)
+        draw.text(
+            (cell.center[0] - width // 2, cell.center[1] - height // 2 - 1),
+            text,
+            font=font,
+            fill=WHITE,
+            stroke_width=1,
+            stroke_fill=BLACK,
+        )
 
     def render_result(self, draw, game):
         result = game.round_result

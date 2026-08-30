@@ -140,15 +140,22 @@ def drive_player_one(out):
     renderer = Renderer()
     enter_targets(game)
     save_frame(renderer, game, out, "10_player_one_start.png")
-    color, values = score_first_player(game)
-    save_frame(renderer, game, out, "11_player_one_score.png")
+    color = game.active_color
+    target = game.target_round.cells[0]
+    first = game.handle_hit(*target.center, color=game.active_dart_color)
+    save_frame(renderer, game, out, "11_after_hit.png")
+    repeat = game.handle_hit(*target.center, color=game.active_dart_color)
+    strip = game.handle_hit(64, 140, color=game.active_dart_color)
+    score = game.round_result.scores[color] if game.round_result else game.target_round.scores[color]
     return {
         "feature": "player-one-set-score",
         "implementation": "head-to-head",
-        "passed": sum(values) > 0 and game.scene == "turn_intro",
+        "passed": first.value == target.value and repeat.value == 0 and strip.value == 0 and game.scene == "turn_intro",
         "color": color,
-        "values": values,
-        "score": sum(values),
+        "hit_value": first.value,
+        "repeat_hit_value": repeat.value,
+        "strip_hit_value": strip.value,
+        "score": score,
     }
 
 

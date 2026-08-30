@@ -21,6 +21,7 @@ class DynamicPlanner:
         "e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6",
         "b5a4", "g8f6", "e1g1", "f8e7", "f1e1", "b7b5",
         "a4b3", "d7d6", "c2c3", "e8g8", "h2h3", "c6b8",
+        "d2d4", "b8d7", "c3c4", "c7c6", "c4b5", "a6b5",
     )
 
     def __init__(self):
@@ -102,13 +103,14 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(game.phase, MatchPhase.CHECKMATE_UNLOCKED)
         self.assertEqual(game.round_number, 4)
         self.assertEqual(len(game.board.move_stack), 18)
-        game.tick(game.scene_started + game.UNLOCK_SECONDS + 0.01)
-        self.assertEqual(game.phase, MatchPhase.TURN_INTRO)
-        self.assertTrue(game.continuation_request(game.round_result or self._winning_result(game)).allow_mate)
 
-    def _winning_result(self, game):
-        from minigame.target_round import RoundResult
-        return RoundResult({"white": 1, "black": 0}, 50, "white", 0.02, game.target_round.seed, False)
+        game.tick(game.scene_started + game.UNLOCK_SECONDS + 0.01)
+        self.finish_ranked_round(game, now)
+
+        fourth = game.planner.requests[3]
+        self.assertEqual(fourth.round_number, 4)
+        self.assertTrue(fourth.allow_mate)
+        self.assertEqual(len(game.board.move_stack), 24)
 
     def test_sudden_death_repeats_on_tie_with_new_shared_seed(self):
         game = self.make_match()
@@ -143,15 +145,40 @@ class MatchTests(unittest.TestCase):
         frame = Renderer().render(game)
         self.assertEqual(frame.size, (128, 160))
 
-    def test_animation_replays_canned_continuation_without_evaluator(self):
+    def play_canned(self, fixture_name):
         game = self.make_match()
-        game.continuation = continuation_from_fixture("continuation_canned_six.json")
-        game.before_wdl = game.continuation.before_wdl
-        game.after_wdl = game.continuation.after_wdl
+        continuation = continuation_from_fixture(fixture_name)
+        game.board = chess.Board(continuation.starting_fen)
+        game.continuation = continuation
+        game.before_wdl = continuation.before_wdl
+        game.after_wdl = continuation.after_wdl
         game.set_phase(MatchPhase.CONTINUATION)
         while game.phase == MatchPhase.CONTINUATION:
             game.tick(game.scene_started + game.PLY_SECONDS + 0.01)
+        return game
+
+    def test_animation_replays_canned_continuation_without_evaluator(self):
+        game = self.play_canned("continuation_canned_six.json")
+
         self.assertEqual([move.uci() for move in game.board.move_stack], list(game.continuation.moves_uci))
+        self.assertEqual(game.board.fen(), game.continuation.final_fen)
+        self.assertEqual(game.phase, MatchPhase.BOARD_HOLD)
+
+    def test_short_terminal_continuation_ends_the_match(self):
+        game = self.play_canned("continuation_canned_short_terminal.json")
+
+        self.assertLess(len(game.continuation.moves_uci), 6)
+        self.assertEqual(game.phase, MatchPhase.GAME_OVER)
+        self.assertEqual(game.game_over_reason, "checkmate")
+        self.assertEqual(Renderer().render(game).size, (128, 160))
+
+    def test_round_four_mate_continuation_animates_and_renders(self):
+        game = self.play_canned("continuation_canned_round4_mate.json")
+
+        self.assertEqual(game.continuation.moves_san, ("Qg7#",))
+        self.assertEqual(game.current_ply_san, "Qg7#")
+        self.assertEqual(game.phase, MatchPhase.GAME_OVER)
+        self.assertEqual(game.game_result, "1-0")
 
     def test_renderer_smokes_all_head_to_head_scenes(self):
         game = self.make_match()
