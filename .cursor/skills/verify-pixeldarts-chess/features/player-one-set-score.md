@@ -10,6 +10,8 @@ Player one throws three darts at a 3x3 grid of shared values. Hits add the print
   first shooter's turn.
 - `miss-zero` scores 0 for empty cells, strip clicks (`y >= 128`), and gaps between targets.
 - `three-darts` ends player one's turn after three throws, including misses.
+- `gated-handoff` waits for the darts to be removed and A to be pressed before
+  player two can throw.
 
 ## How to get to it (user POV)
 
@@ -29,7 +31,8 @@ Preconditions:
 - **Hit a high value.** `handle_hit(cx, cy)` on a non-bull target center. Score increases by that value. Cell is empty. Frame `11_after_hit.png`.
 - **Miss.** `handle_hit(64, 140)` in the strip. Score unchanged. Darts remaining drop by one.
 - **Finish the turn.** Two more hits or misses until darts are 0. Scene is
-  `turn_intro` for the chase color. Final score is in `summary.json`.
+  `turn_intro` for the chase color and remains there until A. Final score is in
+  `summary.json`.
 - **Proof.** Log every hit coordinate and delta. Screenshot before first hit and after the last.
 
 ## Gotchas

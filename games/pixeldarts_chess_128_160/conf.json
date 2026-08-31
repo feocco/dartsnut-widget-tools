@@ -3,7 +3,7 @@
   "type": "game",
   "name": "PixelDarts Chess",
   "author": "Joe Feocco + Codex",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Win head-to-head target rounds to shape six-ply chess continuations.",
   "size": [
     128,

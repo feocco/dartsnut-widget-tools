@@ -202,7 +202,7 @@ class StickyDartHitTests(unittest.TestCase):
         self.assertEqual(accepted, 1)
         self.assertEqual(game.target_round.darts_thrown["white"], 1)
 
-    def test_sticky_dart_across_turn_intro_does_not_score_for_next_player(self):
+    def test_turn_handoff_waits_for_a_and_sticky_dart_does_not_score(self):
         clock = FakeClock()
         board = StickyBoard(clock=clock)
         adapter = DartsnutInputAdapter(board, clock=clock)
@@ -241,8 +241,17 @@ class StickyDartHitTests(unittest.TestCase):
 
         self.assertEqual(game.target_round.darts_thrown["black"], 0)
         self.assertEqual(accepted_black, 0)
-        # Intro may auto-advance via tick; sticky dart still must not score.
-        self.assertIn(game.phase, (MatchPhase.TURN_INTRO, MatchPhase.TARGETS))
+        self.assertEqual(game.phase, MatchPhase.TURN_INTRO)
+
+        self.assertTrue(game.handle_button("a", now))
+        self.assertEqual(game.phase, MatchPhase.TARGETS)
+        for _ in range(20):
+            clock.now = now
+            game.tick(now)
+            for x, y, color in adapter.hit_events():
+                game.handle_hit(x, y, color=color, now=now)
+            now += 0.1
+        self.assertEqual(game.target_round.darts_thrown["black"], 0)
 
     def test_active_only_fallback_ignores_jitter_and_brief_dropout(self):
         clock = FakeClock()
