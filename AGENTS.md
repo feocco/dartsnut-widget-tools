@@ -57,8 +57,10 @@ feature.
 
 ## Cursor Cloud specific instructions
 
-- Use the Electron Dartsnut Agent and its headless Python core for app
-  verification. Do not use the retired Tkinter workflow.
+- Use the Electron Dartsnut Agent on a desktop for interactive app verification
+  and hardware mockups. Use the project Python helpers in Cloud and CI, where a
+  desktop is unavailable.
+- Agent screenshots and GIFs are toolbar actions.
 - Every Cloud Agent pull request must include a real screenshot or video from
   the run. Capture the action and resulting state, not only a final frame.
 - Use the relevant verification skill for launch, doctor, drive, evidence, and

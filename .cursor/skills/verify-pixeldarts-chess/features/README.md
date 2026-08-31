@@ -17,7 +17,8 @@ game. Read this index, then the matching feature file. Doctor must report
 ## Driving conventions
 
 - Headless: `python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py --feature <id> --out artifacts/verify-pixeldarts-chess/<id>`
-- Emulator: mouse dart, `K` = A, `L` = B, `P` = screenshot, then copy `capture/` into the evidence dir.
+- Dartsnut Agent: mouse dart, `K` = A, `L` = B. Use the toolbar for
+  screenshots or GIFs and save the result in the evidence directory.
 - Hits use panel pixels. Playfield is `y` 0–127. Strip is `y` 128–159.
 - Start every recipe from title unless the file says otherwise.
 - Record the feature id in `summary.json`.
