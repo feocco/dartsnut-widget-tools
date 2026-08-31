@@ -168,11 +168,13 @@ def main() -> int:
         evaluator_source = "local-stockfish"
     else:
         evaluator_source = "material-fallback"
+    game_log_path = out / "game.log"
+    game_log_handle = game_log_path.open("w", encoding="utf-8")
     game = subprocess.Popen(
         [args.python, "main.py", "--params", '{"debug": true}', "--data-store", str(out / "data")],
         cwd=str(GAME),
         env=env,
-        stdout=subprocess.PIPE,
+        stdout=game_log_handle,
         stderr=subprocess.STDOUT,
         text=True,
     )
@@ -189,10 +191,12 @@ def main() -> int:
     finally:
         game.terminate()
         try:
-            log = game.stdout.read()
-        except Exception:
-            log = ""
-        (out / "game.log").write_text(log, encoding="utf-8")
+            game.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            game.kill()
+            game.wait(timeout=5)
+        game_log_handle.close()
+        log = game_log_path.read_text(encoding="utf-8")
         scenes = [line.split("scene=")[1].strip() for line in log.splitlines() if "scene=" in line]
         summary.update(
             frames=host.frames,
