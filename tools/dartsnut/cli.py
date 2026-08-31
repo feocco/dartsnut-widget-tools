@@ -168,8 +168,10 @@ def execute(command: Command) -> int:
                 file.local_path,
                 str(file.relative_path),
             )
-        if current is not None and updated != current:
+        config_changed = current is not None and updated != current
+        if config_changed:
             write_apps_config(client, updated or {})
+        if manifest.kind == "widget" or config_changed:
             response = client.request("reload_conf")
             _check_response(response, "reload_conf")
         verify_installed(client, manifest.app_id)
