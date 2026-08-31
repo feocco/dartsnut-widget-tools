@@ -25,7 +25,8 @@ Preconditions:
 - Scene is `turn_intro` with the chase color active until A is pressed.
 
 - **Confirm handoff gate.** Leave the intro idle past the former timeout and
-  confirm it still says `CLEAR DARTS` and `PRESS A`; throws do not score.
+  confirm it shows player one's color and total, player two as next, and
+  `TO CONTINUE` / `PRESS A`; throws do not score.
 - **Start player two.** Press A and confirm the scene changes to `targets`.
 - **Confirm restore.** Render `20_chase_hud.png`. The eight numbers and bull match
   the first shooter's opening grid. Strip contains `BEAT` and `S`.
