@@ -165,7 +165,9 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, default=3)
     args = parser.parse_args()
 
-    out = Path(args.out)
+    # Child processes and ffmpeg resolve relative paths from different working
+    # directories, so all generated paths share one absolute root.
+    out = Path(args.out).resolve()
     host = Host(out / "frames")
     env = dict(os.environ)
     env["STOCKFISH_PATH"] = shutil.which("stockfish") or "/usr/games/stockfish"
@@ -177,6 +179,8 @@ def main() -> int:
         evaluator_source = "material-fallback"
     game_log_path = out / "game.log"
     game_log_handle = game_log_path.open("w", encoding="utf-8")
+    data_store = out / "data"
+    data_store.mkdir(parents=True, exist_ok=True)
     game = subprocess.Popen(
         [
             args.python,
@@ -186,7 +190,7 @@ def main() -> int:
             "--shm",
             host.pdi_name,
             "--data-store",
-            str(out / "data"),
+            str(data_store),
         ],
         cwd=str(GAME),
         env=env,
@@ -194,7 +198,7 @@ def main() -> int:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    log_path = out / "data" / "pixeldarts_chess.log"
+    log_path = data_store / "pixeldarts_chess.log"
     summary = {"passed": False, "rounds": args.rounds, "evaluator": evaluator_source}
     try:
         host.pump(1.5)
