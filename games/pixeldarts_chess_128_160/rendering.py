@@ -74,11 +74,24 @@ class Renderer:
     def render_intro(self, img, draw, game):
         color = BLUE if game.active_color == "white" else RED
         draw.rectangle((0, 0, 127, 127), fill=(8, 10, 18))
+        if game.handoff_score is not None:
+            previous = game.handoff_from_color
+            previous_color = BLUE if previous == "white" else RED
+            draw.rounded_rectangle((8, 8, 119, 61), radius=4, fill=(12, 18, 28), outline=previous_color)
+            self.center(draw, 15, f"{previous.upper()} TOTAL", FONT_SMALL, previous_color)
+            self.center(draw, 32, str(game.handoff_score), FONT_BIG, WHITE)
+            draw.rounded_rectangle((8, 68, 119, 119), radius=4, fill=(12, 18, 28), outline=color)
+            self.center(draw, 75, f"{game.active_color.upper()} SHOOTS NEXT", FONT_SMALL, color)
+            self.center(draw, 93, "TO CONTINUE", FONT_TINY, DIM)
+            self.center(draw, 104, "PRESS A", FONT_MED, GOLD)
+            return
+
         draw.rectangle((10, 18, 117, 109), fill=(10, 14, 24), outline=color)
         symbol = "P" if game.active_color == "white" else "p"
         self.assets.draw_piece_centered(img, chess.Piece.from_symbol(symbol), 64, 43, 28)
         self.center(draw, 67, game.cutscene_title.upper(), FONT_MED, color)
-        self.center(draw, 89, "CLEAR DARTS + A", FONT_SMALL, WHITE)
+        self.center(draw, 87, "TO BEGIN", FONT_TINY, DIM)
+        self.center(draw, 99, "PRESS A", FONT_MED, GOLD)
 
     def render_targets(self, img, draw, game):
         round_ = game.target_round
@@ -221,12 +234,7 @@ class Renderer:
         elif game.scene in ("continuation", "board_hold"):
             rows = self.board_rows(game)
         elif game.scene == "turn_intro":
-            rows = [
-                (f"ROUND {game.round_number}", GOLD),
-                (game.active_color.upper(), BLUE if game.active_color == "white" else RED),
-                ("CLEAR DARTS", WHITE),
-                ("PRESS A", GREEN),
-            ]
+            rows = self.intro_rows(game)
         else:
             rows = [
                 (f"ROUND {game.round_number}", GOLD),
@@ -243,6 +251,22 @@ class Renderer:
             (f"PLY {game.continuation_index}/{len(game.continuation.moves_uci)}", WHITE),
             (f"W {int(game.white_expectation * 100)}%", BLUE),
             ("A NEXT" if game.scene == "board_hold" else game.current_ply_san, GREEN),
+        ]
+
+    def intro_rows(self, game):
+        color = BLUE if game.active_color == "white" else RED
+        if game.handoff_score is None:
+            return [
+                (f"ROUND {game.round_number}", GOLD),
+                (game.active_color.upper(), color),
+                ("TO BEGIN", WHITE),
+                ("PRESS A", GREEN),
+            ]
+        return [
+            (f"{game.handoff_from_color.upper()} {game.handoff_score}", WHITE),
+            (f"{game.active_color.upper()} NEXT", color),
+            ("TO CONTINUE", DIM),
+            ("PRESS A", GREEN),
         ]
 
     @staticmethod

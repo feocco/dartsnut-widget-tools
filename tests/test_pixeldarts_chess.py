@@ -136,12 +136,23 @@ class MatchTests(unittest.TestCase):
         game.handle_hit(*target.center, color=game.active_dart_color)
         game.handle_hit(-1, -1, color=game.active_dart_color)
         game.handle_hit(-1, -1, color=game.active_dart_color)
+        renderer = Renderer()
+
+        self.assertEqual(game.phase, MatchPhase.TURN_INTRO)
+        self.assertEqual(game.handoff_from_color, "white")
+        self.assertEqual(game.handoff_score, target.value)
+        self.assertEqual(
+            [text for text, _ in renderer.intro_rows(game)],
+            [f"WHITE {target.value}", "BLACK NEXT", "TO CONTINUE", "PRESS A"],
+        )
+        self.assertEqual(renderer.render(game).size, (128, 160))
+
         game.handle_button("a")
 
         self.assertTrue(game.chase_active)
         self.assertEqual(game.score_to_beat, target.value)
         self.assertEqual(game.points_needed, target.value + 1)
-        frame = Renderer().render(game)
+        frame = renderer.render(game)
         self.assertEqual(frame.size, (128, 160))
 
     def play_canned(self, fixture_name):

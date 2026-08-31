@@ -68,6 +68,20 @@ class Match:
         return DART_COLORS[self.active_color]
 
     @property
+    def handoff_from_color(self):
+        if not self.target_round or self.phase != MatchPhase.TURN_INTRO:
+            return None
+        active = self.target_round.active_color()
+        if active and active != self.target_round.first_shooter:
+            return self.target_round.first_shooter
+        return None
+
+    @property
+    def handoff_score(self):
+        previous = self.handoff_from_color
+        return self.target_round.scores[previous] if previous else None
+
+    @property
     def board_view_player_name(self):
         if self.phase in (MatchPhase.CONTINUATION, MatchPhase.BOARD_HOLD):
             return "White" if self.board.turn == chess.WHITE else "Black"

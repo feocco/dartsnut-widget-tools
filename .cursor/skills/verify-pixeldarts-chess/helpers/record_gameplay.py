@@ -87,24 +87,29 @@ class Host:
                 self.pdi.buf[0] = 1
             time.sleep(0.004)
 
-    def press(self, button: str = "a") -> None:
+    def wait_for_log(self, log_path: Path, needle: str, previous_count: int, timeout: float = 15) -> None:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            self.pump(0.1)
+            count = log_path.read_text(encoding="utf-8").count(needle) if log_path.exists() else 0
+            if count > previous_count:
+                return
+        raise RuntimeError(f"timed out waiting for {needle!r}")
+
+    def press(self, log_path: Path, button: str = "a") -> None:
+        accepted = log_path.read_text(encoding="utf-8").count(f"button accepted={button}") if log_path.exists() else 0
         self.pdo.buf[0] = 1 if button == "a" else 2
-        self.pump(0.75)
+        self.wait_for_log(log_path, f"button accepted={button}", accepted)
+        released = log_path.read_text(encoding="utf-8").count("'btn_a': False") if log_path.exists() else 0
         self.pdo.buf[0] = 0
-        self.pump(0.75)
+        self.wait_for_log(log_path, "'btn_a': False", released)
 
     def throw(self, x: int, y: int, log_path: Path) -> None:
         previous_shots = log_path.read_text(encoding="utf-8").count("shot color=") if log_path.exists() else 0
         slot = self.next_dart_slot
         self.next_dart_slot = (self.next_dart_slot + 1) % 12
         self.set_dart(x, y, slot=slot)
-        deadline = time.monotonic() + 15
-        while time.monotonic() < deadline:
-            self.pump(0.1)
-            shots = log_path.read_text(encoding="utf-8").count("shot color=") if log_path.exists() else 0
-            if shots > previous_shots:
-                return
-        raise RuntimeError(f"dart in slot {slot} was not accepted")
+        self.wait_for_log(log_path, "shot color=", previous_shots)
 
     def remove_darts(self) -> None:
         self.clear_darts()
@@ -131,19 +136,19 @@ class Host:
 
 def play_round(host: Host, scoring_cells, log_path: Path) -> None:
     host.pump(2.0)
-    host.press("a")
+    host.press(log_path)
     for index in scoring_cells:
         host.throw(*GRID[index], log_path)
     host.pump(2.0)
     host.remove_darts()
-    host.press("a")
+    host.press(log_path)
     for _ in range(3):
         host.throw(*STRIP_MISS, log_path)
     host.pump(1.2)
     host.remove_darts()
-    host.press("a")
+    host.press(log_path)
     host.pump(7.5)
-    host.press("a")
+    host.press(log_path)
 
 
 def main() -> int:
@@ -163,11 +168,13 @@ def main() -> int:
         evaluator_source = "local-stockfish"
     else:
         evaluator_source = "material-fallback"
+    game_log_path = out / "game.log"
+    game_log_handle = game_log_path.open("w", encoding="utf-8")
     game = subprocess.Popen(
         [args.python, "main.py", "--params", '{"debug": true}', "--data-store", str(out / "data")],
         cwd=str(GAME),
         env=env,
-        stdout=subprocess.PIPE,
+        stdout=game_log_handle,
         stderr=subprocess.STDOUT,
         text=True,
     )
@@ -177,17 +184,19 @@ def main() -> int:
         host.pump(1.5)
         if game.poll() is not None:
             raise RuntimeError("game exited during startup")
-        host.press("a")
+        host.press(log_path)
         for round_index in range(args.rounds):
             play_round(host, ((0, 1, 2), (3, 5, 7), (6, 8, 4))[round_index % 3], log_path)
         host.pump(3.0)
     finally:
         game.terminate()
         try:
-            log = game.stdout.read()
-        except Exception:
-            log = ""
-        (out / "game.log").write_text(log, encoding="utf-8")
+            game.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            game.kill()
+            game.wait(timeout=5)
+        game_log_handle.close()
+        log = game_log_path.read_text(encoding="utf-8")
         scenes = [line.split("scene=")[1].strip() for line in log.splitlines() if "scene=" in line]
         summary.update(
             frames=host.frames,
