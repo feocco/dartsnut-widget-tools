@@ -91,7 +91,8 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py 
 `drive_headless.py` calls the game object in-process, so it cannot catch faults in
 `main.py`, the frame pump, or the evaluator chain. `record_gameplay.py` runs the
 shipped game as its own process over pydartsnut shared memory and captures its
-framebuffer, which is the closest surface to hardware available without a desktop.
+framebuffer, which is the closest surface to hardware available without a
+desktop. It leaves all three dart slots active until each player handoff.
 
 It needs an interpreter with `pydartsnut` and `chess` installed:
 
@@ -111,7 +112,8 @@ show real engine continuations rather than the material fallback.
 Emulator drive, when a display is available:
 
 - Start from title.
-- A / `K` advances intros and holds.
+- A / `K` advances intros and holds. Every shooter intro waits for A so players
+  can remove the previous darts before the next turn.
 - Click inside a target circle, not the label plate.
 - Coordinates are panel pixels, origin top-left of the 128x160 frame. Hits with `y >= 128` are strip clicks and must score zero.
 
@@ -121,7 +123,8 @@ Stable handles (assert these, not pixel art details):
   `round_result`, `thinking`, `continuation`, `board_hold`,
   `checkmate_unlocked`, and `game_over`.
 - Round index in the strip: `ROUND 1`, `ROUND 2`, `ROUND 3`, then the unlock.
-- Strip text: chess color, score, darts, `BEAT`, `NEED`, and `A NEXT`.
+- Strip text: chess color, score, darts, `BEAT`, `NEED`, `CLEAR DARTS`,
+  `PRESS A`, and `A NEXT`.
 - Target labels: eight unique values from `1`–`20` and center `25`.
 - Result copy: `BALANCED`, `SMALL 40CP`, `CLEAR 100CP`,
   `STRONG 200CP`, or `DOMINANT 350CP`.

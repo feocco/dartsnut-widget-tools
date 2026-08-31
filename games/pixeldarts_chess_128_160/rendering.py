@@ -78,7 +78,7 @@ class Renderer:
         symbol = "P" if game.active_color == "white" else "p"
         self.assets.draw_piece_centered(img, chess.Piece.from_symbol(symbol), 64, 43, 28)
         self.center(draw, 67, game.cutscene_title.upper(), FONT_MED, color)
-        self.center(draw, 89, game.cutscene_subtitle.upper(), FONT_SMALL, WHITE)
+        self.center(draw, 89, "CLEAR DARTS + A", FONT_SMALL, WHITE)
 
     def render_targets(self, img, draw, game):
         round_ = game.target_round
@@ -220,6 +220,13 @@ class Renderer:
             ]
         elif game.scene in ("continuation", "board_hold"):
             rows = self.board_rows(game)
+        elif game.scene == "turn_intro":
+            rows = [
+                (f"ROUND {game.round_number}", GOLD),
+                (game.active_color.upper(), BLUE if game.active_color == "white" else RED),
+                ("CLEAR DARTS", WHITE),
+                ("PRESS A", GREEN),
+            ]
         else:
             rows = [
                 (f"ROUND {game.round_number}", GOLD),

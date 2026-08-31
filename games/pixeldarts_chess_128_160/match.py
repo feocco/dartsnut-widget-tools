@@ -21,7 +21,6 @@ class MatchPhase(StrEnum):
 
 
 class Match:
-    INTRO_SECONDS = 1.5
     PLY_SECONDS = 0.55
     UNLOCK_SECONDS = 1.5
 
@@ -216,10 +215,6 @@ class Match:
             self.start_round(now)
 
     def tick(self, now):
-        if self.phase == MatchPhase.TURN_INTRO and now - self.scene_started >= self.INTRO_SECONDS:
-            target_phase = MatchPhase.SUDDEN_DEATH if self.target_round.darts_per_player == 1 else MatchPhase.TARGETS
-            self.set_phase(target_phase, now)
-            return True
         if self.phase == MatchPhase.THINKING:
             self.prepare_continuation(now)
             return True

@@ -12,7 +12,8 @@ Player two shoots the same layout player one just saw, with player one's total o
 ## How to get to it (user POV)
 
 - Finish player one's three darts.
-- Wait for the grid to reset (same numbers).
+- Remove the three darts and press A for player two.
+- Confirm the grid resets with the same numbers.
 - Throw while reading the chase line in the strip.
 
 ## Driving it with drive_headless
@@ -21,8 +22,11 @@ Preconditions:
 
 - `implementation` is `head-to-head`.
 - Player one has a finished score `S`.
-- Scene is `targets` with the chase color active.
+- Scene is `turn_intro` with the chase color active until A is pressed.
 
+- **Confirm handoff gate.** Leave the intro idle past the former timeout and
+  confirm it still says `CLEAR DARTS` and `PRESS A`; throws do not score.
+- **Start player two.** Press A and confirm the scene changes to `targets`.
 - **Confirm restore.** Render `20_chase_hud.png`. The eight numbers and bull match
   the first shooter's opening grid. Strip contains `BEAT` and `S`.
 - **Need line.** `NEED` equals `S + 1` minus current P2 score, floored at 0 once P2 is strictly ahead. No extra glow on a single target.

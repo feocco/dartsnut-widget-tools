@@ -1,14 +1,22 @@
+import time
+
 BUTTON_ALIASES = {
     "a": ("btn_a",),
     "b": ("btn_b",),
 }
 
+# Match pydartsnut InputHandler.IDLE_UNBLOCK_DURATION so brief dropouts do not
+# look like a new throw when falling back to get_active_darts.
+ACTIVE_IDLE_CLEAR_SECONDS = 0.2
+
 
 class DartsnutInputAdapter:
-    def __init__(self, dartsnut, logger=None):
+    def __init__(self, dartsnut, logger=None, clock=None):
         self.dartsnut = dartsnut
         self.logger = logger
+        self.clock = clock or time.monotonic
         self.last_active_darts = {}
+        self._active_absent_since = {}
         self.previous_buttons = {}
         self.last_button_snapshot = {}
 
@@ -50,31 +58,56 @@ class DartsnutInputAdapter:
         return events
 
     def hit_events(self):
-        events = []
-        for event in self.poll_hit_events():
-            x, y, color = normalize_hit(event)
-            if x is not None and y is not None:
-                events.append((int(x), int(y), color))
-                self.log(f"dart hit x={int(x)} y={int(y)} color={color}")
-                if isinstance(event, (tuple, list)) and len(event) >= 3:
-                    self.last_active_darts[event[0]] = (int(x), int(y))
+        """Return edge-triggered dart impacts suitable for scoring.
 
-        for event in self.poll_moved_active_darts():
+        Prefer ``get_dart_hits`` (and aliases): pydartsnut already blocks a slot
+        after one event until it goes idle. ``get_active_darts`` reports stuck
+        positions every frame and must not score — including 1px jitter or a
+        dart that remains lit across turn intros.
+        """
+        events = []
+        if self._hit_method():
+            for event in self.poll_hit_events():
+                x, y, color = normalize_hit(event)
+                if x is not None and y is not None:
+                    events.append((int(x), int(y), color))
+                    self.log(f"dart hit x={int(x)} y={int(y)} color={color}")
+                    if isinstance(event, (tuple, list)) and len(event) >= 3:
+                        dart_index = event[0]
+                        self.last_active_darts[dart_index] = (int(x), int(y))
+                        self._active_absent_since.pop(dart_index, None)
+            # Track stuck darts without emitting scoring events.
+            self._sync_active_darts(emit_appears=False)
+            return events
+
+        for event in self._sync_active_darts(emit_appears=True):
             x, y, color = normalize_hit(event)
             if x is not None and y is not None:
                 events.append((int(x), int(y), color))
                 self.log(f"dart active x={int(x)} y={int(y)} color={color}")
         return events
 
-    def poll_hit_events(self):
+    def _hit_method(self):
         for method_name in ("get_dart_hits", "get_hits", "poll_hits", "read_hits"):
             method = getattr(self.dartsnut, method_name, None)
             if method:
-                events = method() or []
-                return events if isinstance(events, list) else [events]
-        return []
+                return method
+        return None
 
-    def poll_moved_active_darts(self):
+    def poll_hit_events(self):
+        method = self._hit_method()
+        if not method:
+            return []
+        events = method() or []
+        return events if isinstance(events, list) else [events]
+
+    def _sync_active_darts(self, emit_appears):
+        """Update stuck-dart tracking; optionally emit appear-only edges.
+
+        Position changes while a dart stays present (hardware jitter) never
+        emit. Absence only clears after ACTIVE_IDLE_CLEAR_SECONDS so brief
+        dropouts do not look like a new throw.
+        """
         method = getattr(self.dartsnut, "get_active_darts", None)
         if not method:
             return []
@@ -85,6 +118,7 @@ class DartsnutInputAdapter:
 
         moved = []
         seen = set()
+        now = self.clock()
         for event in events:
             dart_index, x, y = normalize_active_dart(event)
             if dart_index is None or x is None or y is None:
@@ -94,13 +128,26 @@ class DartsnutInputAdapter:
 
             seen.add(dart_index)
             position = (int(x), int(y))
-            if self.last_active_darts.get(dart_index) != position:
+            self._active_absent_since.pop(dart_index, None)
+            previous = self.last_active_darts.get(dart_index)
+            if previous is None:
                 self.last_active_darts[dart_index] = position
-                moved.append((dart_index, position[0], position[1]))
+                if emit_appears:
+                    moved.append((dart_index, position[0], position[1]))
+            else:
+                # Jitter / drift: remember the latest pixel but do not score.
+                self.last_active_darts[dart_index] = position
 
         for dart_index in list(self.last_active_darts):
-            if dart_index not in seen:
+            if dart_index in seen:
+                continue
+            absent_since = self._active_absent_since.get(dart_index)
+            if absent_since is None:
+                self._active_absent_since[dart_index] = now
+                continue
+            if now - absent_since >= ACTIVE_IDLE_CLEAR_SECONDS:
                 del self.last_active_darts[dart_index]
+                del self._active_absent_since[dart_index]
 
         return moved
 
