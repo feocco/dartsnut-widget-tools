@@ -4,7 +4,7 @@ Player one throws three darts at a 3x3 grid of shared values. Hits add the print
 
 ## Sub-features
 
-- `grid-seeded` shows eight unique values from 1–20 plus center bull `B` at 25.
+- `grid-seeded` shows eight unique values from 1–20 plus center bull printed as `25`.
 - `hit-scores` adds the target value on a hit inside the circle.
 - `hit-removes` replaces that cell with a yellow shot mark for the rest of the
   first shooter's turn.

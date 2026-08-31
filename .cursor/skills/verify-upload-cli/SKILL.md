@@ -9,7 +9,8 @@ description: Verify the Dartsnut WebSocket upload CLI with an isolated mock boar
 
 Run `python3 .cursor/skills/verify-upload-cli/helpers/verify_upload.py`. The
 helper starts an isolated board protocol server on a random localhost port,
-drives `plan`, `upload`, and `verify`, then exits. A zero exit code and
+drives `plan`, `upload`, and `verify` for the sample widget and for nested
+PixelDarts Chess files, then exits. A zero exit code and
 `upload verification passed` mean the run is ready for evidence.
 
 ## Doctor

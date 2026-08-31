@@ -13,22 +13,26 @@ frame. Stop only the emulator process started by the verification run.
 
 For a renderer-only doctor run, use
 `python3 .cursor/skills/verify-pixelboard-widget/helpers/capture_widget.py`.
+That helper writes two 128 by 128 PNGs one second apart so clock refresh can
+be proven without Dartsnut Agent.
 
 ## Doctor
 
 Run `python3 -m scripts.check_repo`. Continue only when the widget manifest
-passes and the helper writes a non-empty 128 by 128 PNG.
+passes and the helper writes two non-empty 128 by 128 PNGs whose pixels differ.
 
 ## Drive
 
-Reload the widget in Dartsnut Agent. Observe at least two clock updates and
-confirm that the frame border, title, board label, clock, and upload label
-remain visible.
+Reload the widget in Dartsnut Agent when a display is available. Observe at
+least two clock updates and confirm that the frame border, title, board label,
+clock, and upload label remain visible. Without Agent, the two-frame helper
+is the Cloud proof for `clock-refresh`.
 
 ## Evidence
 
-Record the reload and two clock updates. Save the video and one final screenshot
-under `/opt/cursor/artifacts`. Use the real app path and renderer.
+Record the reload and two clock updates when Agent is available. On Cloud,
+keep `pixelboard_widget.png` and `pixelboard_widget_clock.png`. Use the real
+app renderer.
 
 ## Cleanup
 
@@ -38,4 +42,5 @@ under `/opt/cursor/artifacts`.
 ## Helpers
 
 Run `python3 .cursor/skills/verify-pixelboard-widget/helpers/capture_widget.py`.
-The helper captures `render_frame()` without creating a board connection.
+The helper captures two `render_frame()` calls 1.1s apart without a board
+connection.

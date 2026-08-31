@@ -10,8 +10,10 @@ Review a plan, then replace `plan` with `upload`.
 
 ## Driving it with the mock board helper
 
-Run the helper. It checks the uploaded `main.py` and verifies that configured
-fields, the page UUID, and the sibling widget remain.
+Run the helper. It uploads the widget (all declared files plus `reload_conf`)
+and PixelDarts Chess (nested `chess_logic/`, `minigame/`, and `assets/`
+directories). It then checks preserved fields, the page UUID, and the sibling
+widget.
 
 ## Gotchas
 
