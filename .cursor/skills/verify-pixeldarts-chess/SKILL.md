@@ -122,10 +122,11 @@ Stable handles (assert these, not pixel art details):
 - Scene names: `title`, `turn_intro`, `targets`, `sudden_death`,
   `round_result`, `thinking`, `continuation`, `board_hold`,
   `checkmate_unlocked`, and `game_over`.
-- Round index in the strip: `ROUND 1`, `ROUND 2`, `ROUND 3`, then the unlock.
-- Strip text: chess color, score, darts, `BEAT`, `NEED`, `TO CONTINUE`,
-  `PRESS A`, and `A NEXT`.
-- Target labels: eight unique values from `1`–`20` and center `25`.
+- Playfield strip: `R1 WHITE` / `R2 BLACK` (round plus chess color), `SCORE`,
+  remaining `DARTS` or `BEAT` / `NEED`, and `HIT TARGET` on the first thrower.
+- Title, result, and unlock still use `ROUND N`. Continuation hold uses `A NEXT`.
+- Intro copy: `TO CONTINUE` and `PRESS A`.
+- Target labels: eight unique values from `1`–`20` and printed center `25`.
 - Result copy: `BALANCED`, `SMALL 40CP`, `CLEAR 100CP`,
   `STRONG 200CP`, or `DOMINANT 350CP`.
 

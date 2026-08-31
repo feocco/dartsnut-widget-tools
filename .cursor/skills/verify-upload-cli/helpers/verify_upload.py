@@ -34,6 +34,8 @@ class BoardState:
                 }
             ]
         }
+        self.directories = set()
+        self.reload_count = 0
 
 
 STATE = BoardState()
@@ -120,13 +122,17 @@ class Handler(socketserver.StreamRequestHandler):
             STATE.config = json.loads(base64.b64decode(request["content"]).decode("utf-8"))
         elif action == "send_file":
             STATE.files[request["file_name"]] = request["file_data"]
+        elif action == "create_directory":
+            STATE.directories.add(request["directory"])
+        elif action == "reload_conf":
+            STATE.reload_count += 1
         elif action == "list_apps":
             names = {name.split("/", 1)[0] for name in STATE.files}
             response["apps"] = [{"name": name} for name in sorted(names)]
         return response
 
 
-def run_cli(port, action):
+def run_cli(port, action, app="widgets/codex_status_128_128"):
     command = [
         "python3",
         "-m",
@@ -137,7 +143,7 @@ def run_cli(port, action):
         "--port",
         str(port),
         "--app",
-        "widgets/codex_status_128_128",
+        app,
     ]
     return subprocess.run(command, cwd=ROOT, check=True, text=True, capture_output=True)
 
@@ -152,6 +158,9 @@ def main():
             raise AssertionError("plan wrote files")
         upload = run_cli(port, "upload")
         verify = run_cli(port, "verify")
+        game_plan = run_cli(port, "plan", "games/pixeldarts_chess_128_160")
+        game_upload = run_cli(port, "upload", "games/pixeldarts_chess_128_160")
+        game_verify = run_cli(port, "verify", "games/pixeldarts_chess_128_160")
         server.shutdown()
         thread.join(timeout=2)
 
@@ -159,10 +168,28 @@ def main():
     assert widget["fields"] == {"ha_url": "kept"}
     assert STATE.config["pages"][0]["uuid"] == "configured"
     assert len(STATE.config["pages"][0]["widgets"]) == 2
-    assert "codex_status_128_128/main.py" in STATE.files
+    for name in ("conf.json", "main.py", "pyproject.toml"):
+        assert f"codex_status_128_128/{name}" in STATE.files
+    assert STATE.reload_count >= 1
+    nested = (
+        "pixeldarts_chess_128_160/chess_logic/continuation.py",
+        "pixeldarts_chess_128_160/minigame/target_round.py",
+    )
+    for path in nested:
+        assert path in STATE.files
+    for directory in (
+        "pixeldarts_chess_128_160",
+        "pixeldarts_chess_128_160/chess_logic",
+        "pixeldarts_chess_128_160/minigame",
+        "pixeldarts_chess_128_160/assets",
+    ):
+        assert directory in STATE.directories
     print(plan.stdout.strip())
     print(upload.stdout.strip())
     print(verify.stdout.strip())
+    print(game_plan.stdout.strip())
+    print(game_upload.stdout.strip())
+    print(game_verify.stdout.strip())
     print("upload verification passed")
 
 

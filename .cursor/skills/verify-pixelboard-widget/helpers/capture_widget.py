@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import importlib.util
 import sys
+import time
 import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 APP = ROOT / "widgets" / "codex_status_128_128" / "main.py"
 OUTPUT = Path("/opt/cursor/artifacts/pixelboard_widget.png")
+OUTPUT_LATER = Path("/opt/cursor/artifacts/pixelboard_widget_clock.png")
 
 
 fake = types.ModuleType("pydartsnut")
@@ -20,6 +22,14 @@ spec.loader.exec_module(module)
 frame = module.render_frame()
 if frame.size != (128, 128):
     raise AssertionError(f"Unexpected frame size: {frame.size}")
+time.sleep(1.1)
+later = module.render_frame()
+if later.size != (128, 128):
+    raise AssertionError(f"Unexpected later frame size: {later.size}")
+if later.tobytes() == frame.tobytes():
+    raise AssertionError("clock did not change across 1.1s")
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 frame.save(OUTPUT)
+later.save(OUTPUT_LATER)
 print(f"saved {OUTPUT} ({OUTPUT.stat().st_size} bytes)")
+print(f"saved {OUTPUT_LATER} ({OUTPUT_LATER.stat().st_size} bytes)")
