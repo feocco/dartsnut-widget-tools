@@ -93,11 +93,18 @@ class Host:
         self.pdo.buf[0] = 0
         self.pump(0.75)
 
-    def throw(self, x: int, y: int) -> None:
+    def throw(self, x: int, y: int, log_path: Path) -> None:
+        previous_shots = log_path.read_text(encoding="utf-8").count("shot color=") if log_path.exists() else 0
         slot = self.next_dart_slot
         self.next_dart_slot = (self.next_dart_slot + 1) % 12
         self.set_dart(x, y, slot=slot)
-        self.pump(1.0)
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            self.pump(0.1)
+            shots = log_path.read_text(encoding="utf-8").count("shot color=") if log_path.exists() else 0
+            if shots > previous_shots:
+                return
+        raise RuntimeError(f"dart in slot {slot} was not accepted")
 
     def remove_darts(self) -> None:
         self.clear_darts()
@@ -122,16 +129,16 @@ class Host:
             shm.unlink()
 
 
-def play_round(host: Host, scoring_cells) -> None:
+def play_round(host: Host, scoring_cells, log_path: Path) -> None:
     host.pump(2.0)
     host.press("a")
     for index in scoring_cells:
-        host.throw(*GRID[index])
+        host.throw(*GRID[index], log_path)
     host.pump(2.0)
     host.remove_darts()
     host.press("a")
     for _ in range(3):
-        host.throw(*STRIP_MISS)
+        host.throw(*STRIP_MISS, log_path)
     host.pump(1.2)
     host.remove_darts()
     host.press("a")
@@ -164,6 +171,7 @@ def main() -> int:
         stderr=subprocess.STDOUT,
         text=True,
     )
+    log_path = out / "data" / "pixeldarts_chess.log"
     summary = {"passed": False, "rounds": args.rounds, "evaluator": evaluator_source}
     try:
         host.pump(1.5)
@@ -171,7 +179,7 @@ def main() -> int:
             raise RuntimeError("game exited during startup")
         host.press("a")
         for round_index in range(args.rounds):
-            play_round(host, ((0, 1, 2), (3, 5, 7), (6, 8, 4))[round_index % 3])
+            play_round(host, ((0, 1, 2), (3, 5, 7), (6, 8, 4))[round_index % 3], log_path)
         host.pump(3.0)
     finally:
         game.terminate()
@@ -185,6 +193,7 @@ def main() -> int:
             frames=host.frames,
             scenes=scenes,
             dart_hits=sum("dart hit x=" in line for line in log.splitlines()),
+            completed_rounds=scenes.count("board_hold"),
             checkmate_unlocked="checkmate_unlocked" in scenes,
             crashed="Traceback" in log,
         )
@@ -192,7 +201,8 @@ def main() -> int:
             summary["seconds"] = round(host.write_concat(out / "concat.txt"), 1)
         summary["passed"] = (
             not summary["crashed"]
-            and summary["checkmate_unlocked"]
+            and summary["completed_rounds"] >= args.rounds
+            and (args.rounds < 3 or summary["checkmate_unlocked"])
             and summary["dart_hits"] == args.rounds * 6
             and scenes.count("continuation") >= args.rounds
         )
