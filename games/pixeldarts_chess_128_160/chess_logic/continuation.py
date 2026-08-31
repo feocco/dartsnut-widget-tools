@@ -80,19 +80,18 @@ class ContinuationPlanner:
                 before_wdl = candidates[0].white_expectation
 
             allowed = candidates if request.allow_mate else [candidate for candidate in candidates if candidate.mate is None]
+            best_score = (allowed[0] if allowed else candidates[0]).score_cp_stm
             if not allowed:
                 selected = candidates[0]
             elif winner_turn:
                 selected = allowed[0]
             else:
-                best_score = candidates[0].score_cp_stm
                 losses = [(max(0, best_score - candidate.score_cp_stm), candidate) for candidate in allowed]
                 if all(loss < target for loss, _ in losses):
                     selected_loss, selected = max(losses, key=lambda item: item[0])
                 else:
                     selected_loss, selected = min(losses, key=lambda item: abs(item[0] - target))
 
-            best_score = candidates[0].score_cp_stm
             loss = max(0, best_score - selected.score_cp_stm)
             san = board.san(selected.move)
             trace.append(

@@ -77,12 +77,24 @@ class ContinuationPlannerTests(unittest.TestCase):
             self.request(mixed, 0.5, winner="white", round_number=1)
         )
         self.assertEqual(selected.moves_uci, ("f7f6",))
+        self.assertEqual(selected.ply_trace[0].best_score_cp, 800)
+        self.assertEqual(selected.ply_trace[0].loss_cp, 0)
 
         all_mate = load_analyse_fixture("all_legal_mate.json")
         selected = ContinuationPlanner(FakeAnalyser(all_mate)).plan(
             self.request(all_mate, 0.5, winner="white", round_number=1)
         )
         self.assertEqual(selected.moves_uci, ("f7g7",))
+
+    def test_early_round_loser_uses_best_non_mate_as_loss_baseline(self):
+        mixed = load_analyse_fixture("winner_pv1_mates.json")
+        selected = ContinuationPlanner(FakeAnalyser(mixed)).plan(
+            self.request(mixed, 0.25, winner="black", round_number=1)
+        )
+
+        self.assertEqual(selected.moves_uci, ("f7e7",))
+        self.assertEqual(selected.ply_trace[0].best_score_cp, 800)
+        self.assertEqual(selected.ply_trace[0].loss_cp, 100)
 
     def test_round_four_loser_closeness_can_select_mate(self):
         fixture = load_analyse_fixture("round4_mate_closest.json")
