@@ -91,7 +91,8 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py 
 `drive_headless.py` calls the game object in-process, so it cannot catch faults in
 `main.py`, the frame pump, or the evaluator chain. `record_gameplay.py` runs the
 shipped game as its own process over pydartsnut shared memory and captures its
-framebuffer, which is the closest surface to hardware available without a desktop.
+framebuffer, which is the closest surface to hardware available without a
+desktop. It leaves all three dart slots active until each player handoff.
 
 It needs an interpreter with `pydartsnut` and `chess` installed:
 

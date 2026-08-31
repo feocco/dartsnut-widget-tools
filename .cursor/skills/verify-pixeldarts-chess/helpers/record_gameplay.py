@@ -98,7 +98,10 @@ class Host:
         self.next_dart_slot = (self.next_dart_slot + 1) % 12
         self.set_dart(x, y, slot=slot)
         self.pump(1.0)
+
+    def remove_darts(self) -> None:
         self.clear_darts()
+        self.next_dart_slot = 0
         self.pump(max(DART_UNBLOCK_SECONDS, 1.0))
 
     def write_concat(self, path: Path) -> float:
@@ -125,10 +128,12 @@ def play_round(host: Host, scoring_cells) -> None:
     for index in scoring_cells:
         host.throw(*GRID[index])
     host.pump(2.0)
+    host.remove_darts()
     host.press("a")
     for _ in range(3):
         host.throw(*STRIP_MISS)
     host.pump(1.2)
+    host.remove_darts()
     host.press("a")
     host.pump(7.5)
     host.press("a")
@@ -179,6 +184,7 @@ def main() -> int:
         summary.update(
             frames=host.frames,
             scenes=scenes,
+            dart_hits=sum("dart hit x=" in line for line in log.splitlines()),
             checkmate_unlocked="checkmate_unlocked" in scenes,
             crashed="Traceback" in log,
         )
@@ -187,6 +193,7 @@ def main() -> int:
         summary["passed"] = (
             not summary["crashed"]
             and summary["checkmate_unlocked"]
+            and summary["dart_hits"] == args.rounds * 6
             and scenes.count("continuation") >= args.rounds
         )
         (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
