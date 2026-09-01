@@ -5,10 +5,10 @@ This is the closest thing to hardware that works without a desktop: `main.py` ru
 unmodified, so FramePump, the input adapter, and the evaluator chain are all exercised.
 Headless drives bypass that process boundary and cannot catch faults in it.
 
-Protocol, mirrored from the emulator core:
-  pdishm[0]           1 = host ready for a frame, 0 = game published a frame
-  pdoshm[0]           button bitmask, bit 0 is A and bit 1 is B
-  pdoshm[1 + i*4 ..]  dart slot i as x_lo, x_hi, y_lo, y_hi, 0xffff when absent
+Names and sizes mirror Dartsnut Agent's services/emulator-core/core.py:
+  pdi_<unique>[0]       1 = host ready for a frame, 0 = game published a frame
+  pdoshm[0]             button bitmask, bit 0 is A and bit 1 is B
+  pdoshm[1 + i*4 ..]    dart slot i as x_lo, x_hi, y_lo, y_hi, 0xffff when absent
 
 Dart coordinates are hardware units; pydartsnut maps 1800..39800 onto 0..127.
 """
@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 import time
+import uuid
 from multiprocessing import shared_memory
 from pathlib import Path
 
@@ -30,7 +31,8 @@ REPO = Path(__file__).resolve().parents[4]
 GAME = REPO / "games" / "pixeldarts_chess_128_160"
 WIDTH, HEIGHT = 128, 160
 FRAME_BYTES = WIDTH * HEIGHT * 3
-DART_UNBLOCK_SECONDS = 0.30
+PDO_BYTES = 1 + 12 * 4
+DART_UNBLOCK_SECONDS = 0.5
 GRID = ((22, 22), (64, 22), (106, 22), (22, 64), (64, 64), (106, 64), (22, 106), (64, 106), (106, 106))
 STRIP_MISS = (64, 150)
 
@@ -39,15 +41,20 @@ def raw_coord(pixel: int) -> int:
     return 1800 + pixel * 299 + 149
 
 
+def unique_pdi_name() -> str:
+    # Including the implicit leading slash, Darwin shm_open names are limited to 31 characters.
+    return f"pdi_{uuid.uuid4().hex[:26]}"
+
+
 class Host:
     def __init__(self, out: Path):
-        for name in ("pdishm", "pdoshm"):
-            try:
-                shared_memory.SharedMemory(name=name).unlink()
-            except FileNotFoundError:
-                pass
-        self.pdi = shared_memory.SharedMemory(name="pdishm", create=True, size=FRAME_BYTES + 1)
-        self.pdo = shared_memory.SharedMemory(name="pdoshm", create=True, size=128)
+        self.pdi_name = unique_pdi_name()
+        try:
+            shared_memory.SharedMemory(name="pdoshm").unlink()
+        except FileNotFoundError:
+            pass
+        self.pdi = shared_memory.SharedMemory(name=self.pdi_name, create=True, size=FRAME_BYTES + 1)
+        self.pdo = shared_memory.SharedMemory(name="pdoshm", create=True, size=PDO_BYTES)
         self.pdo.buf[0] = 0
         self.clear_darts()
         self.pdi.buf[0] = 1
@@ -158,7 +165,9 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, default=3)
     args = parser.parse_args()
 
-    out = Path(args.out)
+    # Child processes and ffmpeg resolve relative paths from different working
+    # directories, so all generated paths share one absolute root.
+    out = Path(args.out).resolve()
     host = Host(out / "frames")
     env = dict(os.environ)
     env["STOCKFISH_PATH"] = shutil.which("stockfish") or "/usr/games/stockfish"
@@ -170,15 +179,26 @@ def main() -> int:
         evaluator_source = "material-fallback"
     game_log_path = out / "game.log"
     game_log_handle = game_log_path.open("w", encoding="utf-8")
+    data_store = out / "data"
+    data_store.mkdir(parents=True, exist_ok=True)
     game = subprocess.Popen(
-        [args.python, "main.py", "--params", '{"debug": true}', "--data-store", str(out / "data")],
+        [
+            args.python,
+            "main.py",
+            "--params",
+            '{"debug": true}',
+            "--shm",
+            host.pdi_name,
+            "--data-store",
+            str(data_store),
+        ],
         cwd=str(GAME),
         env=env,
         stdout=game_log_handle,
         stderr=subprocess.STDOUT,
         text=True,
     )
-    log_path = out / "data" / "pixeldarts_chess.log"
+    log_path = data_store / "pixeldarts_chess.log"
     summary = {"passed": False, "rounds": args.rounds, "evaluator": evaluator_source}
     try:
         host.pump(1.5)

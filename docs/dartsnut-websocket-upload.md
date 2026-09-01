@@ -54,10 +54,9 @@ PixelDart games use `[128, 160]` and include a preview.
 
 ## Emulator
 
-Use the current Electron-based
-[Dartsnut Agent](https://github.com/Dartsnut/dartsnut_emulator). The desktop
-application runs a headless Python emulator core and uses `uv` to synchronize
-the selected app's `pyproject.toml`.
+Use [Dartsnut Agent](https://github.com/Dartsnut/dartsnut_emulator) on a
+desktop. It is the board maker's Electron app. Its Python core uses `uv` to
+synchronize the selected app's `pyproject.toml`.
 
 ```bash
 git clone https://github.com/Dartsnut/dartsnut_emulator.git
@@ -67,5 +66,11 @@ pnpm run setup:python
 pnpm run dev
 ```
 
-Open an app directory in the desktop UI. Use the built-in controls for darts,
-buttons, screenshots, and GIF recording.
+Open an app directory in the desktop UI. Click the main panel to throw. `K` is
+button A and `L` is button B. Screenshots and GIFs are toolbar actions.
+
+Cloud and CI runs use the project helpers instead. `drive_headless.py` calls a
+game's input methods in-process. `record_gameplay.py` starts the shipped
+`main.py` over `pydartsnut` shared memory, which also exercises the frame pump
+and input adapter. These helpers keep Cloud setup Python-only; Agent remains the
+desktop path for interactive controls and the hardware mockup.

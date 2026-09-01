@@ -104,9 +104,9 @@ Runtime Compose configuration belongs in `feocco/homelab-config`.
 
 ## Run in the emulator
 
-The current upstream emulator is the Electron-based
-[Dartsnut Agent](https://github.com/Dartsnut/dartsnut_emulator). It launches a
-headless Python core and synchronizes each app from its `pyproject.toml`.
+Dartsnut Agent is the desktop app the board maker ships. Clone
+[dartsnut_emulator](https://github.com/Dartsnut/dartsnut_emulator), then start
+the app:
 
 ```bash
 git clone https://github.com/Dartsnut/dartsnut_emulator.git
@@ -116,5 +116,17 @@ pnpm run setup:python
 pnpm run dev
 ```
 
-Open either app directory from the Dartsnut Agent UI. Use its input controls to
-throw darts and press buttons.
+Open either app directory from the Dartsnut Agent UI. Click the main 128x128
+panel to throw. `K` is button A and `L` is button B. Screenshots and GIFs are
+toolbar actions.
+
+Cloud agents and most CI runs have no desktop, so this repo keeps two Python
+helpers. `drive_headless.py` builds a game in-process and calls its input
+methods. It is fast and fixture-friendly, but it does not start `pydartsnut`.
+`record_gameplay.py` starts the real `main.py` over the same shared-memory
+boundary Agent uses, so the frame pump and input adapter run too.
+
+Use Agent on a desktop when you need the device mockup or interactive controls.
+Use the Python helpers for Cloud verification. Keeping both paths means the
+helpers may need updates when Agent changes its launch protocol. That is still
+smaller than installing Node and Electron on every Cloud machine.

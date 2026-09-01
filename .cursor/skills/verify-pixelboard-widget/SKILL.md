@@ -30,9 +30,10 @@ is the Cloud proof for `clock-refresh`.
 
 ## Evidence
 
-Record the reload and two clock updates when Agent is available. On Cloud,
-keep `pixelboard_widget.png` and `pixelboard_widget_clock.png`. Use the real
-app renderer.
+Record the reload and two clock updates when Agent is available. Use Agent's
+toolbar to capture a screenshot or GIF. On Cloud, keep
+`pixelboard_widget.png` and `pixelboard_widget_clock.png`. Use the real app
+renderer.
 
 ## Cleanup
 

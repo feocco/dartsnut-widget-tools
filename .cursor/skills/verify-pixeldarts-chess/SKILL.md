@@ -32,11 +32,10 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
 
 That process exits. There is no server to keep alive. Each drive starts a new in-process game, feeds `handle_button` / `handle_hit` the same way [`input_adapter.py`](games/pixeldarts_chess_128_160/input_adapter.py) does after it normalizes emulator or board events, and writes frames plus a log.
 
-The upstream Dartsnut emulator is now a pnpm/Electron monorepo. The old
-`emulator.py`/Tk launch path no longer exists. Follow that repository's current
-README for a full GUI-emulator pass. For routine Cloud verification, use the
-process-level shared-memory recorder documented below; it runs the same
-`pydartsnut` boundary without cloning the emulator repository.
+The upstream Dartsnut emulator is a pnpm/Electron monorepo. Follow that
+repository's current setup for a full GUI-emulator pass. For routine Cloud
+verification, use the process-level shared-memory recorder documented below;
+it runs the same `pydartsnut` boundary without cloning the emulator repository.
 
 Do not upload to a physical board unless the user asks for a hardware pass.
 
@@ -61,7 +60,8 @@ It checks:
 
 ## Drive
 
-Prefer the headless helper. It is the same public game methods the emulator uses, without Tk.
+Prefer the headless helper. It calls the same public game methods the emulator
+uses without starting a desktop.
 
 ```bash
 python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
@@ -88,16 +88,18 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py 
 
 ## Recording real gameplay
 
-`drive_headless.py` calls the game object in-process, so it cannot catch faults in
-`main.py`, the frame pump, or the evaluator chain. `record_gameplay.py` runs the
-shipped game as its own process over pydartsnut shared memory and captures its
-framebuffer, which is the closest surface to hardware available without a
-desktop. It leaves all three dart slots active until each player handoff.
+`drive_headless.py` calls the game object in-process, so it cannot catch faults
+in `main.py`, the frame pump, or the evaluator chain. `record_gameplay.py` runs
+the shipped game as its own process over pydartsnut shared memory and captures
+its framebuffer, which is the closest surface to hardware available without a
+desktop. It creates a unique framebuffer name and passes it to `main.py` with
+`--shm`, matching Dartsnut Agent's launch boundary. It leaves all three dart
+slots active until each player handoff.
 
 It needs an interpreter with `pydartsnut` and `chess` installed:
 
 ```bash
-python3 -m venv /tmp/dartsnut && /tmp/dartsnut/bin/pip install pydartsnut==1.2.1 chess Pillow
+python3 -m venv /tmp/dartsnut && /tmp/dartsnut/bin/pip install pydartsnut==1.2.1 chess Pillow==12.1.1
 python3 .cursor/skills/verify-pixeldarts-chess/helpers/record_gameplay.py \
   --python /tmp/dartsnut/bin/python \
   --out artifacts/verify-pixeldarts-chess/gameplay

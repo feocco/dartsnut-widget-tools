@@ -12,8 +12,8 @@ From the title screen, player one starts a match and reaches the first playable 
 
 ## How to get to it (user POV)
 
-- Launch the game in the emulator or boot it on the PixelDart.
-- Press A (`K` in the emulator) on the title screen.
+- Launch the game in Dartsnut Agent or boot it on the PixelDart.
+- Press A (`K` in Dartsnut Agent) on the title screen.
 - Press A again if a "White shoots" style intro appears.
 
 ## Driving it with drive_headless
