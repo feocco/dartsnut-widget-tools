@@ -14,7 +14,7 @@ the current checkout.
 - Both colors play the same grid. A hit removes a cell. Misses, removed cells,
   duplicate hits, and the strip (`y >= 128`) score zero. Three darts per color.
 - The chase player sees `BEAT` and `NEED`, with no suggested target.
-- Alternate the first shooter by chess color each ranked round.
+- White is the first shooter in every ranked round.
 - Ties use one-dart sudden death on a new seed shared by both colors. Repeat on
   another tie. Never select random chess because of a tied dart score.
 - `maximum_possible_score` is the sum of the three highest cells on that grid,
@@ -120,7 +120,7 @@ caller and no per-legal-move ranking loop.
 ## Goal 3: match, rendering, and mate unlock
 
 ```text
-/goal PixelDarts Chess Goal 3: implement title, first shooter, chase shooter, repeatable one-dart sudden death, thinking, result, continuation animation, board hold, next round, and game-over phases. Preserve FEN across rounds, use a new ranked-round seed, alternate first shooter by color, render BEAT and NEED without target advice, animate the supplied Continuation without evaluator calls, and display CHECKMATE UNLOCKED only after round 3 animation. Tests load canned continuations and never use STOCKFISH_API_URL.
+/goal PixelDarts Chess Goal 3: implement title, first shooter, chase shooter, repeatable one-dart sudden death, thinking, result, continuation animation, board hold, next round, and game-over phases. Preserve FEN across rounds, use a new ranked-round seed, keep White as the first shooter, render BEAT and NEED without target advice, animate the supplied Continuation without evaluator calls, and display CHECKMATE UNLOCKED only after round 3 animation. Tests load canned continuations and never use STOCKFISH_API_URL.
 ```
 
 Evidence: phase, FEN-chain, seed, shooter, tie, and mate-policy tests pass;

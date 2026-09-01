@@ -237,8 +237,11 @@ def drive_continuation(out):
     press_a(game)
     game.tick(game.scene_started)
     save_frame(renderer, game, out, "31_animation_start.png")
+    move_colors = []
     while game.phase == MatchPhase.CONTINUATION:
+        move_colors.append("white" if game.board.turn == chess.WHITE else "black")
         game.tick(game.scene_started + game.PLY_SECONDS + 0.01)
+        save_frame(renderer, game, out, f"31_ply_{len(move_colors)}_{move_colors[-1]}.png")
     save_frame(renderer, game, out, "32_board.png")
     held_fen = game.board.fen()
     board_hold_waits = (
@@ -251,6 +254,7 @@ def drive_continuation(out):
         "implementation": "head-to-head",
         "passed": (
             len(game.continuation.moves_uci) == 6
+            and move_colors == ["white", "black", "white", "black", "white", "black"]
             and game.board.fen() == game.continuation.final_fen
             and board_hold_waits
         ),
@@ -258,6 +262,7 @@ def drive_continuation(out):
         "end_fen": game.board.fen(),
         "moves_uci": list(game.continuation.moves_uci),
         "moves_san": list(game.continuation.moves_san),
+        "move_colors": move_colors,
         "before_wdl": game.before_wdl,
         "after_wdl": game.after_wdl,
         "board_hold_waits": board_hold_waits,
@@ -323,7 +328,7 @@ def drive_three_rounds(out):
     save_frame(renderer, game, out, "r4_result.png")
     passed = (
         unlock_visible
-        and [item["first_shooter"] for item in rounds] == ["white", "black", "white"]
+        and [item["first_shooter"] for item in rounds] == ["white", "white", "white"]
         and len({item["round_seed"] for item in rounds}) == 3
         and all(len(item["moves_uci"]) == 6 for item in rounds)
         and all(rounds[index]["end_fen"] == rounds[index + 1]["start_fen"] for index in (0, 1))

@@ -68,9 +68,8 @@ Player two sees:
 The chase HUD shows `BEAT` and `NEED` without highlighting a cheapest winning
 target. The pressure readout must not solve the aiming decision.
 
-Alternate the first player every round. Showing the chase gives player two an
-advantage, and alternating order makes that advantage part of the match rather
-than a permanent player advantage.
+White shoots first every round. The physical player assigned to White keeps
+the opening turn for the full match.
 
 ## From score to chess
 
@@ -231,7 +230,7 @@ a generated raster. Kenney is the right starting asset for this version.
 - Remove a target after one hit.
 - Restore the exact same seeded grid for player two.
 - Show player two the score to beat and points needed.
-- Alternate who shoots first each round.
+- Keep White as the first shooter each round.
 - A match plays three full rounds before checkmate unlocks for round 4.
 - Resolve ties with one-dart sudden death.
 - Compete for three full chess moves, six plies.

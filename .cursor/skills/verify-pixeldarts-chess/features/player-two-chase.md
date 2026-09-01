@@ -38,5 +38,5 @@ Preconditions:
 ## Gotchas
 
 - Showing P1's hit locations to P2 is a fail. Only the total is allowed.
-- Alternating who shoots first is [three-round match](./three-round-match.md) round 2, not this file.
+- White remains the first shooter in every round; see [three-round match](./three-round-match.md).
 - If the helper highlights the cheapest win, that is a product bug relative to `docs/design/head-to-head-target-round.md`.
