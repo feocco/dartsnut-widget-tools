@@ -285,7 +285,10 @@ class FallbackEvaluator:
             try:
                 analyser = getattr(evaluator, "analyse_multipv", None)
                 if analyser:
-                    return analyser(board, multipv)
+                    candidates = analyser(board, multipv)
+                    if not candidates:
+                        raise RuntimeError("Evaluator returned no legal moves")
+                    return candidates
             except Exception as exc:
                 self.last_error = str(exc)
         raise RuntimeError(self.last_error or "No evaluator available")

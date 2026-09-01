@@ -86,6 +86,20 @@ class EngineClientTests(unittest.TestCase):
 
         self.assertEqual(FallbackEvaluator([Broken(), Working()]).analyse_multipv(chess.Board(), 8), ["working"])
 
+    def test_fallback_uses_later_multipv_evaluator_after_empty_result(self):
+        class Empty:
+            def analyse_multipv(self, board, multipv):
+                return []
+
+        class Working:
+            def analyse_multipv(self, board, multipv):
+                return ["working"]
+
+        evaluator = FallbackEvaluator([Empty(), Working()])
+
+        self.assertEqual(evaluator.analyse_multipv(chess.Board(), 8), ["working"])
+        self.assertEqual(evaluator.last_error, "Evaluator returned no legal moves")
+
 
 if __name__ == "__main__":
     unittest.main()
