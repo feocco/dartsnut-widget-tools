@@ -4,7 +4,8 @@ set -euo pipefail
 TAILSCALE_VERSION="${TAILSCALE_VERSION:-1.102.3}"
 INSTALL_DIR="${TAILSCALE_INSTALL_DIR:-${HOME}/.local/bin}"
 
-if command -v tailscale >/dev/null 2>&1 && command -v tailscaled >/dev/null 2>&1; then
+if [[ -x "${INSTALL_DIR}/tailscale" && -x "${INSTALL_DIR}/tailscaled" ]] ||
+  { command -v tailscale >/dev/null 2>&1 && command -v tailscaled >/dev/null 2>&1; }; then
   echo "Tailscale client is already installed."
   exit 0
 fi
