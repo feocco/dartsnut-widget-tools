@@ -1,0 +1,4 @@
+{
+  "install": "python3 -m pip install -e \".[dev]\" && .cursor/scripts/install-tailscale.sh",
+  "start": ".cursor/scripts/start-tailscale.sh"
+}

@@ -57,6 +57,18 @@ feature.
 
 ## Cursor Cloud specific instructions
 
+- Cloud Agents join the tailnet through userspace Tailscale started by
+  `.cursor/scripts/start-tailscale.sh`. The runtime must provide `TS_AUTHKEY`
+  tagged only `tag:cursor-cloud`; never print, log, or commit it.
+- Call the private Stockfish service through the userspace SOCKS5 proxy:
+  `curl --proxy socks5h://127.0.0.1:1055 "$STOCKFISH_URL/health"`.
+- For shells that should route supported traffic through the tailnet, use
+  `export ALL_PROXY=socks5h://127.0.0.1:1055/` and
+  `export NO_PROXY=127.0.0.1,localhost`. Unset `ALL_PROXY` when finished.
+- A raw `curl http://100.x` bypasses the userspace proxy and fails. This is
+  expected; it is not evidence that a Tailscale access grant denied traffic.
+- Inspect the userspace daemon with
+  `tailscale --socket="/tmp/cursor-tailscale-${UID}/tailscaled.sock" status`.
 - Use the Electron Dartsnut Agent and its headless Python core for app
   verification. Do not use the retired Tkinter workflow.
 - Every Cloud Agent pull request must include a real screenshot or video from
