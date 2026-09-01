@@ -129,6 +129,18 @@ class ContinuationPlannerTests(unittest.TestCase):
                 self.assertEqual(analyser.calls, [])
                 self.assertEqual(continuation.moves_uci, ())
 
+    def test_non_terminal_empty_reply_rejects_black_only_line(self):
+        fixture = load_analyse_fixture("startpos_black_mpv8.json")
+        analyser = FakeAnalyser(fixture)
+        request = ContinuationRequest(fixture["fen"], "black", 0.2, 1, max_plies=6)
+
+        with self.assertRaisesRegex(RuntimeError, "no legal moves for non-terminal position"):
+            ContinuationPlanner(analyser).plan(request)
+
+        self.assertEqual(len(analyser.calls), 2)
+        self.assertEqual(chess.Board(analyser.calls[0][0]).turn, chess.BLACK)
+        self.assertEqual(chess.Board(analyser.calls[1][0]).turn, chess.WHITE)
+
     def test_mate_during_line_stops_before_six_calls(self):
         analyser = FakeAnalyser.from_script("early_terminal_script.json")
         request = ContinuationRequest(chess.STARTING_FEN, "black", 0.5, 4, max_plies=6)

@@ -75,7 +75,7 @@ class ContinuationPlanner:
             candidates = self.analyser.analyse_multipv(board.copy(stack=False), multipv)
             candidates = [candidate for candidate in candidates if candidate.move in board.legal_moves]
             if not candidates:
-                break
+                raise RuntimeError(f"Evaluator returned no legal moves for non-terminal position {board.fen()}")
             if ply == 0:
                 before_wdl = candidates[0].white_expectation
 

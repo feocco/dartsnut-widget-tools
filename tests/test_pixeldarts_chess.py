@@ -86,7 +86,7 @@ class MatchTests(unittest.TestCase):
         game.handle_button("a", now)
         return now
 
-    def test_three_rounds_chain_fens_seeds_and_alternate_first_color(self):
+    def test_three_rounds_chain_fens_seeds_and_keep_white_first(self):
         game = self.make_match()
         now = 0
         seeds = []
@@ -96,14 +96,16 @@ class MatchTests(unittest.TestCase):
             now = self.finish_ranked_round(game, now)
             seeds.append(1000 + len(seeds) + 1)
 
-        self.assertEqual(starters, ["white", "black", "white"])
+        self.assertEqual(starters, ["white", "white", "white"])
         self.assertEqual([request.round_number for request in game.planner.requests], [1, 2, 3])
         self.assertTrue(all(not request.allow_mate for request in game.planner.requests))
         self.assertEqual(game.phase, MatchPhase.CHECKMATE_UNLOCKED)
         self.assertEqual(game.round_number, 4)
+        self.assertEqual(game.first_shooter, "white")
         self.assertEqual(len(game.board.move_stack), 18)
 
         game.tick(game.scene_started + game.UNLOCK_SECONDS + 0.01)
+        self.assertEqual(game.first_shooter, "white")
         self.finish_ranked_round(game, now)
 
         fourth = game.planner.requests[3]

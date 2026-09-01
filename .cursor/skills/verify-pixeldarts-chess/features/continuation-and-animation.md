@@ -28,7 +28,9 @@ Preconditions:
 - **Thinking.** Scene may be `thinking` while a line is chosen. Do not inject UCI.
 - **Animation.** Scene `continuation` advances a sequence of board frames.
   `summary.json` lists `moves_san` length 6. Replaying those moves from the
-  start FEN is legal.
+  start FEN is legal. `move_colors` alternates White and Black for every ply;
+  a non-terminal empty evaluator response is a failure, never a completed
+  one-sided continuation.
 - **Rest.** After the final ply, scene is `board_hold`. The final position and
   evaluator bar remain visible indefinitely with `A NEXT`; only button A may
   begin the next round.

@@ -221,7 +221,7 @@ class Match:
     def advance_round(self, now):
         completed = self.round_number
         self.round_number += 1
-        self.first_shooter = "black" if self.first_shooter == "white" else "white"
+        self.first_shooter = "white"
         self.sudden_death_index = 0
         if completed == 3:
             self.set_phase(MatchPhase.CHECKMATE_UNLOCKED, now)

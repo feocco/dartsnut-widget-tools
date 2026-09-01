@@ -39,7 +39,7 @@ Each file: H1, one paragraph, then `Sub-features`, `How to get to it (user POV)`
 - [Player one sets the score](./player-one-set-score.md) — three darts, visible total, grid depletes.
 - [Player two chases](./player-two-chase.md) — same layout, `BEAT` / `NEED`, no cheapest-target highlight.
 - [Score becomes chess](./continuation-and-animation.md) — one round's margin, legal six-ply line, animated pieces, real eval.
-- [Three-round match](./three-round-match.md) — three full rounds, swapped first shooter, mechanic after round 3.
+- [Three-round match](./three-round-match.md) — three full rounds, White first throughout, mechanic after round 3.
 - [Sudden death](./sudden-death.md) — tied scores, one dart each, new shared grid.
 - [Finish by checkmate](./game-over.md) — terminal continuation, result screen, A reset.
 - [Live Stockfish](./live-stockfish.md) proves deployed `/analyse`, removed `/rank`, one UCI search, and HTTP-backed WDL.

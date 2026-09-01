@@ -58,7 +58,7 @@ python3 -m tools.dartsnut upload \
 - The score margin selects a 0/40/100/200/350cp loss band.
 - The continuation planner performs one MultiPV search per ply, up to six.
 - After the sixth ply, the final board remains until a player presses A.
-- The chess position persists and first shooter alternates by color.
+- The chess position persists and White shoots first in every ranked round.
 - Checkmate is filtered in rounds 1–3 and unlocked for round 4.
 
 Target and shot-mark art comes from Kenney's CC0 Shooting Gallery pack; the
