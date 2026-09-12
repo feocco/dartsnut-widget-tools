@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Play a complete PixelDarts Chess match and report the named winner."""
 
 from __future__ import annotations
 
