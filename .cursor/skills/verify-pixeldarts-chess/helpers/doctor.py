@@ -35,6 +35,7 @@ def unittest_ok():
             "tests/test_target_round.py",
             "tests/test_continuation_planner.py",
             "tests/test_stockfish_evaluator_service.py",
+            "tests/test_play_full_game.py",
         ],
         cwd=REPO,
         capture_output=True,

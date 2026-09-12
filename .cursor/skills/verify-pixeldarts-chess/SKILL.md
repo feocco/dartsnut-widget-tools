@@ -71,7 +71,18 @@ python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
 
 Feature ids match the map files: `start-match`, `player-one-set-score`,
 `player-two-chase`, `continuation-and-animation`, `three-round-match`,
-`sudden-death`, and `game-over`.
+`sudden-death`, `game-over`, and `full-game`.
+
+A full match to a named winner is a separate command. It plays every round
+until the chess game ends and must not be replaced by `three-round-match`:
+
+```bash
+python3 .cursor/skills/verify-pixeldarts-chess/helpers/play_full_game.py \
+  --winner white \
+  --evaluator fixture \
+  --pace test \
+  --out artifacts/verify-pixeldarts-chess/full-game-white
+```
 
 The helper exits nonzero when a driven feature does not reach its required state.
 
@@ -168,6 +179,7 @@ Kills only the PID in that file. Does not delete `artifacts/verify-pixeldarts-ch
 | Command | Role |
 | --- | --- |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/doctor.py` | Readiness JSON |
+| `python3 .cursor/skills/verify-pixeldarts-chess/helpers/play_full_game.py --winner white --out DIR` | Full match to a named winner |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py --feature start-match --out DIR` | One feature |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/record_gameplay.py --python PYTHON --out DIR` | Real process/framebuffer recording |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py --out DIR` | Live evaluator and continuation |
