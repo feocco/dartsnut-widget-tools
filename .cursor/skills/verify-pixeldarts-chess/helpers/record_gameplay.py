@@ -20,12 +20,19 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 import uuid
 from multiprocessing import shared_memory
 from pathlib import Path
 
 from PIL import Image
+
+HELPERS = Path(__file__).resolve().parent
+if str(HELPERS) not in sys.path:
+    sys.path.insert(0, str(HELPERS))
+
+from turn_invariants import parse_continuation_logs, recording_passed  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[4]
 GAME = REPO / "games" / "pixeldarts_chess_128_160"
@@ -141,7 +148,14 @@ class Host:
             shm.unlink()
 
 
-def play_round(host: Host, scoring_cells, log_path: Path) -> None:
+def last_scene(log_path: Path) -> str:
+    if not log_path.exists():
+        return ""
+    scenes = [line.split("scene=")[1].strip() for line in log_path.read_text(encoding="utf-8").splitlines() if "scene=" in line]
+    return scenes[-1] if scenes else ""
+
+
+def play_round(host: Host, scoring_cells, log_path: Path) -> str:
     host.pump(2.0)
     host.press(log_path)
     for index in scoring_cells:
@@ -155,7 +169,7 @@ def play_round(host: Host, scoring_cells, log_path: Path) -> None:
     host.remove_darts()
     host.press(log_path)
     host.pump(7.5)
-    host.press(log_path)
+    return last_scene(log_path)
 
 
 def main() -> int:
@@ -163,6 +177,16 @@ def main() -> int:
     parser.add_argument("--python", required=True, help="interpreter with pydartsnut and chess installed")
     parser.add_argument("--out", required=True)
     parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument(
+        "--require-live",
+        action="store_true",
+        help="fail unless STOCKFISH_API_URL selected the HTTP evaluator",
+    )
+    parser.add_argument(
+        "--check-turns",
+        action="store_true",
+        help="fail on illegal, short, or one-sided continuation logs",
+    )
     args = parser.parse_args()
 
     # Child processes and ffmpeg resolve relative paths from different working
@@ -170,16 +194,22 @@ def main() -> int:
     out = Path(args.out).resolve()
     host = Host(out / "frames")
     env = dict(os.environ)
-    env["STOCKFISH_PATH"] = shutil.which("stockfish") or "/usr/games/stockfish"
     if env.get("STOCKFISH_API_URL"):
+        env.pop("STOCKFISH_PATH", None)
         evaluator_source = "homelab-http"
-    elif Path(env["STOCKFISH_PATH"]).is_file():
-        evaluator_source = "local-stockfish"
     else:
-        evaluator_source = "material-fallback"
+        env["STOCKFISH_PATH"] = shutil.which("stockfish") or "/usr/games/stockfish"
+        if Path(env["STOCKFISH_PATH"]).is_file():
+            evaluator_source = "local-stockfish"
+        else:
+            evaluator_source = "material-fallback"
+    if args.require_live and evaluator_source != "homelab-http":
+        raise SystemExit("STOCKFISH_API_URL is required for --require-live")
     game_log_path = out / "game.log"
     game_log_handle = game_log_path.open("w", encoding="utf-8")
     data_store = out / "data"
+    if data_store.exists():
+        shutil.rmtree(data_store)
     data_store.mkdir(parents=True, exist_ok=True)
     game = subprocess.Popen(
         [
@@ -206,7 +236,10 @@ def main() -> int:
             raise RuntimeError("game exited during startup")
         host.press(log_path)
         for round_index in range(args.rounds):
-            play_round(host, ((0, 1, 2), (3, 5, 7), (6, 8, 4))[round_index % 3], log_path)
+            scene = play_round(host, ((0, 1, 2), (3, 5, 7), (6, 8, 4))[round_index % 3], log_path)
+            if scene == "game_over":
+                break
+            host.press(log_path)
         host.pump(3.0)
     finally:
         game.terminate()
@@ -217,7 +250,10 @@ def main() -> int:
             game.wait(timeout=5)
         game_log_handle.close()
         log = game_log_path.read_text(encoding="utf-8")
+        data_log = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
         scenes = [line.split("scene=")[1].strip() for line in log.splitlines() if "scene=" in line]
+        continuations = parse_continuation_logs(data_log or log)
+        turn_problems = [item for item in continuations if item["problems"]]
         summary.update(
             frames=host.frames,
             scenes=scenes,
@@ -225,15 +261,33 @@ def main() -> int:
             completed_rounds=scenes.count("board_hold"),
             checkmate_unlocked="checkmate_unlocked" in scenes,
             crashed="Traceback" in log,
+            continuations=[
+                {
+                    "winner": item["winner"],
+                    "moves_uci": item["moves_uci"],
+                    "colors": item["colors"],
+                    "problems": item["problems"],
+                }
+                for item in continuations
+            ],
+            turn_problems=turn_problems,
         )
         if host.frames:
             summary["seconds"] = round(host.write_concat(out / "concat.txt"), 1)
-        summary["passed"] = (
-            not summary["crashed"]
-            and summary["completed_rounds"] >= args.rounds
-            and (args.rounds < 3 or summary["checkmate_unlocked"])
-            and summary["dart_hits"] == args.rounds * 6
-            and scenes.count("continuation") >= args.rounds
+        summary["game_over"] = "game_over" in scenes
+        summary["passed"] = recording_passed(
+            crashed=summary["crashed"],
+            completed_rounds=summary["completed_rounds"],
+            requested_rounds=args.rounds,
+            dart_hits=summary["dart_hits"],
+            continuation_scenes=scenes.count("continuation"),
+            checkmate_unlocked=summary["checkmate_unlocked"],
+            game_over=summary["game_over"],
+            evaluator=evaluator_source,
+            require_live=args.require_live,
+            check_turns=args.check_turns,
+            turn_problems=turn_problems,
+            continuation_logs=len(continuations),
         )
         (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({key: summary[key] for key in summary if key != "scenes"}, indent=2))

@@ -34,3 +34,18 @@ Require `summary.json` to report `analyse_status: 200`, `rank_status: 404`,
 - A successful `/health` response does not prove the `/analyse` contract.
 - Counting HTTP requests does not prove engine searches. Count UCI `go` commands.
 - Clear `STOCKFISH_PATH` so a failed HTTP call cannot fall through to a local engine.
+
+## Live turn path
+
+Turn choice, side-to-move, and stalled or illegal continuations use a separate hook. It talks to the live HTTP API and then drives `record_gameplay.py` / `main.py`. It does not use MultiPV fixtures.
+
+```bash
+bash .cursor/cloud/tailscale-userspace.sh
+source .cursor/cloud/tailscale-proxy.env
+python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_turn_path.py \
+  --out artifacts/verify-pixeldarts-chess/live-turn-path
+```
+
+The hook exits `2` when `TAILSCALE_AUTH_KEY` or `STOCKFISH_API_URL` is unset. Do not invent a URL. Fixture mode stays on `drive_headless.py` for changes that do not touch engine replies or continuation state.
+
+`--rounds` defaults to 3. Use `--rounds 5` when checking the window where the physical board was reported to stick. A legal mate before the last requested `board_hold` is a pass, not a stuck side. A 5-round live process drive on current main produced five legal alternating continuations and `Nxf7#` in round 5; it did not reproduce a one-sided or stalled turn.
