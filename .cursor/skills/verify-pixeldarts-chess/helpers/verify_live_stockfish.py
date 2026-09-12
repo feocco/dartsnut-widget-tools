@@ -81,7 +81,7 @@ def drive_live_continuation(base_url):
     if not isinstance(primary, HttpStockfishEvaluator):
         raise AssertionError(f"first evaluator is {type(primary).__name__}")
 
-    game = Match(evaluator=evaluator, logger=events.append, seed_source=lambda number: 7000 + number)
+    game = Match(evaluator=evaluator, logger=events.append, seed_source=lambda number: 7000 + number, pace="test")
     try:
         game.handle_button("a")
         game.handle_button("a")

@@ -25,6 +25,9 @@ class PlayFullGameTests(unittest.TestCase):
         self.assertTrue(summary["board_visible_through_holds"])
         self.assertTrue(all(hold["board_visible"] for hold in summary["holds"]))
         self.assertTrue(all(hold["continue_prompt_on_strip"] for hold in summary["holds"]))
+        self.assertTrue(all(not hold["covering_next_shoot"] for hold in summary["holds"]))
+        self.assertTrue(all(not hold["after_a_covering_next_shoot"] for hold in summary["holds"]))
+        self.assertTrue(all(hold["after_a_scene"] != "turn_intro" for hold in summary["holds"]))
         self.assertTrue((out / "r1_hold.png").is_file())
         self.assertTrue((out / "game_over.png").is_file())
         self.assertEqual(json.loads((out / "summary.json").read_text(encoding="utf-8"))["winner"], "white")
@@ -49,6 +52,9 @@ class PlayFullGameTests(unittest.TestCase):
         self.assertGreater(play["holds"][0]["dwell_seconds"], test["holds"][0]["dwell_seconds"])
         self.assertTrue(test["holds"][0]["board_visible"])
         self.assertTrue(play["holds"][0]["board_visible"])
+        self.assertFalse(test["holds"][0]["after_a_covering_next_shoot"])
+        self.assertFalse(play["holds"][0]["after_a_covering_next_shoot"])
+        self.assertEqual(play["holds"][0]["after_a_scene"], "targets")
 
 
 if __name__ == "__main__":

@@ -186,7 +186,7 @@ def main() -> int:
             args.python,
             "main.py",
             "--params",
-            '{"debug": true}',
+            '{"debug": true, "pace": "test"}',
             "--shm",
             host.pdi_name,
             "--data-store",

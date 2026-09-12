@@ -7,6 +7,17 @@ from minigame.target_round import RoundResult, TargetRound
 DART_COLORS = {"white": "blue", "black": "red"}
 
 
+class Pace(StrEnum):
+    TEST = "test"
+    PLAY = "play"
+
+
+HOLD_DWELL_SECONDS = {
+    Pace.TEST: 0.0,
+    Pace.PLAY: 2.0,
+}
+
+
 class MatchPhase(StrEnum):
     TITLE = "title"
     TURN_INTRO = "turn_intro"
@@ -24,12 +35,13 @@ class Match:
     PLY_SECONDS = 0.55
     UNLOCK_SECONDS = 1.5
 
-    def __init__(self, evaluator=None, now=0, logger=None, seed_source=None):
+    def __init__(self, evaluator=None, now=0, logger=None, seed_source=None, pace=Pace.PLAY):
         require_chess()
         self.evaluator = evaluator or build_default_evaluator()
         self.planner = ContinuationPlanner(self.evaluator)
         self.logger = logger
         self.seed_source = seed_source or (lambda number: number * 104729)
+        self.pace = Pace(pace)
         self.board = chess.Board()
         self.phase = MatchPhase.TITLE
         self.scene = self.phase.value
@@ -108,6 +120,10 @@ class Match:
         current = self.target_round.scores[self.target_round.active_color()]
         return max(0, self.score_to_beat - current + 1)
 
+    @property
+    def hold_dwell_seconds(self):
+        return HOLD_DWELL_SECONDS[self.pace]
+
     def set_phase(self, phase, now=0):
         self.phase = MatchPhase(phase)
         self.scene = self.phase.value
@@ -115,17 +131,24 @@ class Match:
         self.debug_message = self.scene
         self.log_event(f"scene={self.scene}")
 
-    def start_round(self, now=0):
+    def start_round(self, now=0, show_intro=True):
         self.round_result = None
         self.continuation = None
         self.continuation_index = 0
         self.target_round = TargetRound(self.seed_source(self.round_number), self.first_shooter)
-        self.start_intro(now)
+        if show_intro:
+            self.start_intro(now)
+            return
+        self.begin_targets(now)
 
     def start_intro(self, now=0):
         self.cutscene_title = f"{self.target_round.active_color().title()} Shoots"
         self.cutscene_subtitle = "three darts" if self.target_round.darts_per_player == 3 else "one dart"
         self.set_phase(MatchPhase.TURN_INTRO, now)
+
+    def begin_targets(self, now=0):
+        target_phase = MatchPhase.SUDDEN_DEATH if self.target_round.darts_per_player == 1 else MatchPhase.TARGETS
+        self.set_phase(target_phase, now)
 
     def handle_button(self, button, now=0):
         if button != "a":
@@ -134,13 +157,14 @@ class Match:
             self.start_round(now)
             return True
         if self.phase == MatchPhase.TURN_INTRO:
-            target_phase = MatchPhase.SUDDEN_DEATH if self.target_round.darts_per_player == 1 else MatchPhase.TARGETS
-            self.set_phase(target_phase, now)
+            self.begin_targets(now)
             return True
         if self.phase == MatchPhase.RESULT:
             self.set_phase(MatchPhase.THINKING, now)
             return True
         if self.phase == MatchPhase.BOARD_HOLD:
+            if now - self.scene_started < self.hold_dwell_seconds:
+                return False
             self.advance_round(now)
             return True
         if self.phase == MatchPhase.GAME_OVER:
@@ -226,7 +250,7 @@ class Match:
         if completed == 3:
             self.set_phase(MatchPhase.CHECKMATE_UNLOCKED, now)
         else:
-            self.start_round(now)
+            self.start_round(now, show_intro=False)
 
     def tick(self, now):
         if self.phase == MatchPhase.THINKING:

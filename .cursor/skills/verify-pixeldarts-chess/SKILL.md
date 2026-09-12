@@ -137,7 +137,8 @@ Stable handles (assert these, not pixel art details):
   `checkmate_unlocked`, and `game_over`.
 - Playfield strip: `R1 WHITE` / `R2 BLACK` (round plus chess color), `SCORE`,
   remaining `DARTS` or `BEAT` / `NEED`, and `HIT TARGET` on the first thrower.
-- Title, result, and unlock still use `ROUND N`. Continuation hold uses `A NEXT`.
+- Title, result, and unlock still use `ROUND N`. Continuation hold uses `PRESS A`
+  on the bottom strip. The chessboard stays on the 128x128 playfield.
 - Intro copy: `TO CONTINUE` and `PRESS A`.
 - Target labels: eight unique values from `1`–`20` and printed center `25`.
 - Result copy: `BALANCED`, `SMALL 40CP`, `CLEAR 100CP`,
