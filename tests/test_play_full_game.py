@@ -6,7 +6,7 @@ from pathlib import Path
 HELPER = Path(__file__).resolve().parents[1] / ".cursor" / "skills" / "verify-pixeldarts-chess" / "helpers"
 sys.path.insert(0, str(HELPER))
 
-from play_full_game import EvaluatorKind, Pace, run_full_game  # noqa: E402
+from play_full_game import EvaluatorKind, Pace, run_full_game
 
 
 class PlayFullGameTests(unittest.TestCase):
