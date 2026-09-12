@@ -250,7 +250,7 @@ class Renderer:
             (f"ROUND {game.round_number}", GOLD),
             (f"PLY {game.continuation_index}/{len(game.continuation.moves_uci)}", WHITE),
             (f"W {int(game.white_expectation * 100)}%", BLUE),
-            ("A NEXT" if game.scene == "board_hold" else game.current_ply_san, GREEN),
+            ("PRESS A" if game.scene == "board_hold" else game.current_ply_san, GREEN),
         ]
 
     def intro_rows(self, game):

@@ -9,9 +9,10 @@ can be told which side should win.
 - `named-winner` biases live target hits so the named side scores slightly
   more points each round. The final chess result still comes from playing the
   rounds, not from overwriting the score.
-- `pace-split` names `test` and `play`. `test` is the fast recording pace.
-  `play` uses a longer hold dwell so later recordings do not inherit it by
-  accident.
+- `pace-split` names `test` and `play` on `Match`. `test` is the fast recording
+  pace (`hold_dwell_seconds=0`). `play` waits 2s on the chessboard before A
+  continues. `record_gameplay.py` passes `"pace": "test"` so later recordings
+  do not inherit play dwell.
 - `hold-report` captures each between-round `board_hold` and records whether
   the chessboard stayed visible and whether a covering next-shoot scene
   replaced it after A.
@@ -20,7 +21,8 @@ can be told which side should win.
 
 - Start a match from title.
 - Play every round through the chess continuation.
-- Look at the final chess position on each between-round hold.
+- Look at the final chess position on each between-round hold. The chessboard
+  stays on the top 128x128 playfield. `PRESS A` sits on the bottom strip.
 - Continue until checkmate or another terminal result.
 
 ## Driving it with play_full_game

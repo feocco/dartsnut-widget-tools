@@ -65,7 +65,7 @@ class TerminalPlanner:
 
 def make_game():
     RUN_LOG.clear()
-    game = Match(evaluator=object(), seed_source=lambda number: 7000 + number, logger=RUN_LOG.append)
+    game = Match(evaluator=object(), seed_source=lambda number: 7000 + number, logger=RUN_LOG.append, pace="test")
     game.planner = CannedPlanner()
     game.verification_log = RUN_LOG
     return game

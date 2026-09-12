@@ -19,7 +19,7 @@ sys.path.insert(0, str(GAME))
 
 from chess_logic.continuation import Continuation  # noqa: E402
 from engine_client import HttpStockfishEvaluator, StaticMaterialEvaluator, chess  # noqa: E402
-from match import Match, MatchPhase  # noqa: E402
+from match import Match, MatchPhase, Pace  # noqa: E402
 from rendering import BOARD_DARK, BOARD_LIGHT, Renderer  # noqa: E402
 
 from tests.fixture_support import load_continuation_fixture  # noqa: E402
@@ -29,21 +29,10 @@ INTRO_FILL = (8, 10, 18)
 HOLD_PROMPT_MARKERS = ("A NEXT", "PRESS A", "TO CONTINUE")
 
 
-class Pace(StrEnum):
-    TEST = "test"
-    PLAY = "play"
-
-
 class EvaluatorKind(StrEnum):
     FIXTURE = "fixture"
     MATERIAL = "material"
     STOCKFISH = "stockfish"
-
-
-HOLD_DWELL_SECONDS = {
-    Pace.TEST: 0.0,
-    Pace.PLAY: 2.0,
-}
 
 WINNER_FIXTURES = {
     "white": "full_game_white_wins.json",
@@ -179,17 +168,17 @@ def hold_prompt_texts(renderer: Renderer, game: Match) -> list[str]:
     return [text for text, _ in renderer.board_rows(game)]
 
 
-def make_game(evaluator_kind: EvaluatorKind, winner: str) -> Match:
+def make_game(evaluator_kind: EvaluatorKind, winner: str, pace: Pace) -> Match:
     if evaluator_kind is EvaluatorKind.FIXTURE:
-        game = Match(evaluator=object(), seed_source=lambda number: 9000 + number)
+        game = Match(evaluator=object(), seed_source=lambda number: 9000 + number, pace=pace)
         payload = load_continuation_fixture(WINNER_FIXTURES[winner])
         game.planner = ScriptedLinePlanner(tuple(payload["moves_uci"]))
         return game
     if evaluator_kind is EvaluatorKind.MATERIAL:
-        return Match(evaluator=StaticMaterialEvaluator(), seed_source=lambda number: 9000 + number)
+        return Match(evaluator=StaticMaterialEvaluator(), seed_source=lambda number: 9000 + number, pace=pace)
     if not os.environ.get("STOCKFISH_API_URL"):
         raise RuntimeError("STOCKFISH_API_URL is unset")
-    return Match(evaluator=HttpStockfishEvaluator(), seed_source=lambda number: 9000 + number)
+    return Match(evaluator=HttpStockfishEvaluator(), seed_source=lambda number: 9000 + number, pace=pace)
 
 
 def run_full_game(
@@ -202,11 +191,11 @@ def run_full_game(
 ) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     renderer = Renderer()
-    game = make_game(evaluator_kind, winner)
+    game = make_game(evaluator_kind, winner, pace)
     now = 0.0
     rounds: list[dict] = []
     holds: list[dict] = []
-    dwell = HOLD_DWELL_SECONDS[pace]
+    dwell = game.hold_dwell_seconds
 
     while game.phase != MatchPhase.GAME_OVER:
         if game.round_number > max_rounds:
