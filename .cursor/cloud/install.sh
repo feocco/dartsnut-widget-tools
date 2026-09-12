@@ -8,6 +8,10 @@ cd "$ROOT"
 
 export DEBIAN_FRONTEND=noninteractive
 
+curl_fetch() {
+  curl -fsSL --connect-timeout 15 --max-time 120 --retry 3 --retry-delay 5 "$@"
+}
+
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
   ca-certificates \
@@ -23,9 +27,9 @@ install_tailscale() {
   else
     . /etc/os-release
     sudo mkdir -p --mode=0755 /usr/share/keyrings
-    curl -fsSL "https://pkgs.tailscale.com/stable/ubuntu/${VERSION_CODENAME}.noarmor.gpg" \
+    curl_fetch "https://pkgs.tailscale.com/stable/ubuntu/${VERSION_CODENAME}.noarmor.gpg" \
       | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-    curl -fsSL "https://pkgs.tailscale.com/stable/ubuntu/${VERSION_CODENAME}.tailscale-keyring.list" \
+    curl_fetch "https://pkgs.tailscale.com/stable/ubuntu/${VERSION_CODENAME}.tailscale-keyring.list" \
       | sudo tee /etc/apt/sources.list.d/tailscale.list >/dev/null
     sudo apt-get update
     sudo apt-get install -y tailscale
@@ -43,7 +47,7 @@ install_node_and_pnpm() {
     node_major=0
   fi
   if [ "${node_major}" -lt 20 ]; then
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    curl_fetch https://deb.nodesource.com/setup_22.x | sudo -E bash -
     sudo apt-get install -y nodejs
   fi
   if ! command -v pnpm >/dev/null; then
@@ -69,8 +73,10 @@ install_emulator() {
     sudo rm -rf "${emulator_dir}"
     sudo git clone --depth 1 https://github.com/Dartsnut/dartsnut_emulator.git "${emulator_dir}"
   else
-    sudo git -C "${emulator_dir}" fetch --depth 1 origin
-    sudo git -C "${emulator_dir}" merge --ff-only FETCH_HEAD || true
+    # Shallow clones cannot reliably fast-forward after origin moves. Fetch the
+    # current tip and reset to it so later installs pick up emulator updates.
+    sudo git -C "${emulator_dir}" fetch --depth 1 origin HEAD
+    sudo git -C "${emulator_dir}" reset --hard FETCH_HEAD
   fi
   sudo chown -R "$(id -un):$(id -gn)" "${emulator_dir}"
   (
