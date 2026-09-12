@@ -49,6 +49,10 @@ class TurnInvariantTests(unittest.TestCase):
             ],
         )
 
+    def test_mate_in_one_is_not_one_sided(self):
+        fen = "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 2 3"
+        self.assertEqual(line_problems(fen, ("h5f7",)), [])
+
     def test_live_round5_mate_line_is_legal_not_stuck(self):
         fen = "4kbnr/4pp2/2b3p1/p3N2p/8/5Q2/PPPP1PPP/RNB1K2R w KQk - 0 13"
         self.assertEqual(line_problems(fen, ("f3c6", "e8d8", "e5f7")), [])
