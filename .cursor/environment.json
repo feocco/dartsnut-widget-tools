@@ -1,0 +1,5 @@
+{
+  "name": "dartsnut-widget-tools",
+  "install": "bash .cursor/cloud/install.sh",
+  "start": "bash .cursor/cloud/tailscale-userspace.sh"
+}
