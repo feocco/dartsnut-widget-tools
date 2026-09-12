@@ -57,6 +57,19 @@ feature.
 
 ## Cursor Cloud specific instructions
 
+- Tests do not need Stockfish. After the environment venv install, run
+  `python3 -m unittest discover -s tests -v` or the `.venv` equivalent.
+- The Dartsnut Agent desktop emulator is a pnpm Electron app at
+  `/opt/dartsnut_emulator`, not an Android emulator. Start Agent with
+  `pnpm run dev` only when a desktop is available. Cloud verification of the
+  game uses the existing Python helpers (`drive_headless.py`,
+  `record_gameplay.py`).
+- Stockfish is reached only via `STOCKFISH_API_URL`, through the userspace
+  Tailscale proxy. After start, source `.cursor/cloud/tailscale-proxy.env`.
+  Health is `GET $STOCKFISH_API_URL/health`. Analyse is
+  `POST $STOCKFISH_API_URL/analyse`. Do not hardcode the homelab address.
+- Required user-scoped Cloud Agent secrets (never team secrets):
+  `TAILSCALE_AUTH_KEY`, `STOCKFISH_API_URL`.
 - Use the Electron Dartsnut Agent on a desktop for interactive app verification
   and hardware mockups. Use the project Python helpers in Cloud and CI, where a
   desktop is unavailable.
