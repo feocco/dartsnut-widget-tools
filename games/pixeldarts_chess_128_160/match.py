@@ -192,6 +192,15 @@ class Match:
         self.after_wdl = self.continuation.after_wdl
         self.white_expectation = self.before_wdl
         self.continuation_index = 0
+        self.log_event(
+            "continuation "
+            f"start_fen={self.continuation.starting_fen} "
+            f"winner={self.round_result.winner} "
+            f"moves={' '.join(self.continuation.moves_uci)} "
+            f"colors={' '.join(item.color for item in self.continuation.ply_trace)}"
+        )
+        if getattr(self.evaluator, "last_error", ""):
+            self.log_event("evaluator_fallback")
         if not self.continuation.moves_uci:
             self.finish_continuation(now)
             return

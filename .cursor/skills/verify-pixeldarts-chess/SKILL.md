@@ -77,7 +77,7 @@ The helper exits nonzero when a driven feature does not reach its required state
 
 ## Verifying live Stockfish
 
-Live Stockfish uses a separate helper because fixture-backed drives must remain deterministic:
+Live Stockfish uses a separate helper because fixture-backed drives must remain deterministic. Turn choice and stalled-side checks use `verify_live_turn_path.py` against the HTTP API and `main.py`.
 
 ```bash
 python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py \
@@ -171,6 +171,7 @@ Kills only the PID in that file. Does not delete `artifacts/verify-pixeldarts-ch
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py --feature start-match --out DIR` | One feature |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/record_gameplay.py --python PYTHON --out DIR` | Real process/framebuffer recording |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_stockfish.py --out DIR` | Live evaluator and continuation |
+| `python3 .cursor/skills/verify-pixeldarts-chess/helpers/verify_live_turn_path.py --out DIR` | Live Stockfish turn choice plus `main.py` process path (`--rounds 5` for the stuck-side window) |
 | `python3 .cursor/skills/verify-pixeldarts-chess/helpers/cleanup.py --pid-file FILE` | Emulator teardown |
 
 Read `features/README.md` before driving. One convenient entry point is incomplete when the map lists others.
