@@ -26,6 +26,8 @@ from tests.fixture_support import load_continuation_fixture  # noqa: E402
 
 BOARD_COLORS = {BOARD_LIGHT, BOARD_DARK}
 INTRO_FILL = (8, 10, 18)
+INTRO_PANEL = (10, 14, 24)
+UNLOCK_FILL = (20, 8, 10)
 HOLD_PROMPT_MARKERS = ("A NEXT", "PRESS A", "TO CONTINUE")
 
 
@@ -87,13 +89,20 @@ def inspect_frame(img: Image.Image) -> dict[str, bool | int]:
     playfield = list(img.crop((0, 0, 128, 128)).get_flattened_data())
     strip = list(img.crop((0, 128, 128, 160)).get_flattened_data())
     board_pixels = sum(1 for pixel in playfield if pixel[:3] in BOARD_COLORS)
-    intro_pixels = sum(1 for pixel in playfield if pixel[:3] == INTRO_FILL)
+    intro_fill_pixels = sum(1 for pixel in playfield if pixel[:3] == INTRO_FILL)
+    intro_panel_pixels = sum(1 for pixel in playfield if pixel[:3] == INTRO_PANEL)
+    unlock_pixels = sum(1 for pixel in playfield if pixel[:3] == UNLOCK_FILL)
     strip_pixels = sum(1 for pixel in strip if pixel[:3] != (0, 0, 0))
     return {
         "board_visible": board_pixels >= 2500,
-        "covering_next_shoot": intro_pixels >= 4000 and board_pixels < 400,
+        "covering_next_shoot": (
+            intro_panel_pixels >= 3000
+            and intro_fill_pixels >= 1500
+            and board_pixels < 400
+            and unlock_pixels < 500
+        ),
         "board_pixels": board_pixels,
-        "intro_pixels": intro_pixels,
+        "intro_panel_pixels": intro_panel_pixels,
         "strip_lit": strip_pixels >= 20,
     }
 
