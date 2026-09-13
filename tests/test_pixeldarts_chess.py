@@ -11,7 +11,7 @@ from chess_logic.continuation import Continuation
 from engine_client import chess
 from frame_pump import FramePump
 from input_adapter import DartsnutInputAdapter, normalize_active_dart, normalize_hit
-from match import Match, MatchPhase
+from match import HOLD_DWELL_SECONDS, Match, MatchPhase, Pace
 from rendering import Renderer
 
 
@@ -51,16 +51,16 @@ class DynamicPlanner:
 
 
 class MatchTests(unittest.TestCase):
-    def make_match(self):
-        game = Match(evaluator=object(), seed_source=lambda number: 1000 + number)
+    def make_match(self, pace=Pace.TEST):
+        game = Match(evaluator=object(), seed_source=lambda number: 1000 + number, pace=pace)
         game.planner = DynamicPlanner()
         return game
 
     def enter_targets(self, game, now=0):
         if game.phase == MatchPhase.TITLE:
             game.handle_button("a", now)
-        self.assertEqual(game.phase, MatchPhase.TURN_INTRO)
-        game.handle_button("a", now)
+        if game.phase == MatchPhase.TURN_INTRO:
+            game.handle_button("a", now)
         self.assertIn(game.phase, (MatchPhase.TARGETS, MatchPhase.SUDDEN_DEATH))
 
     def finish_ranked_round(self, game, now):
@@ -157,8 +157,8 @@ class MatchTests(unittest.TestCase):
         frame = renderer.render(game)
         self.assertEqual(frame.size, (128, 160))
 
-    def play_canned(self, fixture_name):
-        game = self.make_match()
+    def play_canned(self, fixture_name, pace=Pace.TEST):
+        game = self.make_match(pace=pace)
         continuation = continuation_from_fixture(fixture_name)
         game.board = chess.Board(continuation.starting_fen)
         game.continuation = continuation
@@ -187,15 +187,25 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(game.round_number, round_number)
 
         self.assertTrue(game.handle_button("a", game.scene_started + 3601))
-        self.assertEqual(game.phase, MatchPhase.TURN_INTRO)
+        self.assertEqual(game.phase, MatchPhase.TARGETS)
         self.assertEqual(game.round_number, round_number + 1)
 
-    def test_board_hold_strip_prompts_a_next(self):
+    def test_board_hold_strip_prompts_press_a(self):
         game = self.play_canned("continuation_canned_six.json")
         renderer = Renderer()
 
-        self.assertEqual(renderer.board_rows(game)[-1][0], "A NEXT")
+        self.assertEqual(renderer.board_rows(game)[-1][0], "PRESS A")
         self.assertEqual(renderer.render(game).size, (128, 160))
+
+    def test_play_pace_keeps_board_until_hold_dwell(self):
+        game = self.play_canned("continuation_canned_six.json", pace=Pace.PLAY)
+        hold_started = game.scene_started
+
+        self.assertFalse(game.handle_button("a", hold_started + 0.01))
+        self.assertEqual(game.phase, MatchPhase.BOARD_HOLD)
+        self.assertTrue(game.handle_button("a", hold_started + HOLD_DWELL_SECONDS[Pace.PLAY] + 0.01))
+        self.assertEqual(game.phase, MatchPhase.TARGETS)
+        self.assertNotEqual(game.scene, "turn_intro")
 
     def test_short_terminal_continuation_ends_the_match(self):
         game = self.play_canned("continuation_canned_short_terminal.json")

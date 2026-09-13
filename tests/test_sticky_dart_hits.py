@@ -110,7 +110,7 @@ class FakeClock:
 
 
 def make_match():
-    game = Match(evaluator=object(), seed_source=lambda n: 1000 + n)
+    game = Match(evaluator=object(), seed_source=lambda n: 1000 + n, pace="test")
     game.planner = type(
         "P",
         (),

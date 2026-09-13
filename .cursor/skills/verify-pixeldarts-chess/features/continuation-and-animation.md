@@ -32,8 +32,9 @@ Preconditions:
   a non-terminal empty evaluator response is a failure, never a completed
   one-sided continuation.
 - **Rest.** After the final ply, scene is `board_hold`. The final position and
-  evaluator bar remain visible indefinitely with `A NEXT`; only button A may
-  begin the next round.
+  evaluator bar remain visible indefinitely with `PRESS A` on the strip; only
+  button A may begin the next round. The next-shoot intro must not cover the
+  board after that press.
 - **Eval.** Before and after percents in the strip or result copy come from the evaluator. After percent is not a linear map of the dart margin.
 - **Proof.** Frames for result and at least one mid-animation ply. `summary.json` has `start_fen`, `moves_uci`, `before_wdl`, `after_wdl`.
 

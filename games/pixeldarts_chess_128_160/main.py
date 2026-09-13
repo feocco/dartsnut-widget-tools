@@ -5,7 +5,7 @@ import time
 
 from frame_pump import FramePump
 from input_adapter import DartsnutInputAdapter
-from match import Match
+from match import Match, Pace
 from pydartsnut import Dartsnut
 from rendering import Renderer
 
@@ -27,6 +27,7 @@ if PARAMS.get("stockfish_api_url") and not os.environ.get("STOCKFISH_API_URL"):
     os.environ["STOCKFISH_API_URL"] = PARAMS["stockfish_api_url"]
 DEBUG = os.environ.get("PIXELDARTS_CHESS_DEBUG") == "1" or bool(PARAMS.get("debug"))
 DEBUG_OVERLAY = os.environ.get("PIXELDARTS_CHESS_DEBUG_OVERLAY") == "1" or bool(PARAMS.get("debug_overlay"))
+PACE = Pace(PARAMS.get("pace") or os.environ.get("PIXELDARTS_CHESS_PACE") or Pace.PLAY)
 
 
 def log(message):
@@ -44,7 +45,7 @@ def log(message):
 
 
 dartsnut = Dartsnut()
-game = Match(logger=log)
+game = Match(logger=log, pace=PACE)
 game.debug_overlay_enabled = DEBUG_OVERLAY
 renderer = Renderer()
 input_adapter = DartsnutInputAdapter(dartsnut, logger=log)
