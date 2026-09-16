@@ -70,6 +70,11 @@ feature.
   `POST $STOCKFISH_API_URL/analyse`. Do not hardcode the homelab address.
 - Required user-scoped Cloud Agent secrets (never team secrets):
   `TAILSCALE_AUTH_KEY`, `STOCKFISH_API_URL`.
+- Restricted Cloud egress must allow `archive.ubuntu.com`,
+  `security.ubuntu.com` (for `python3-venv`), `pypi.org`,
+  `files.pythonhosted.org`, and `registry.npmjs.org`. Tailscale binaries come
+  from `pkgs.tailscale.com` (already covered by `*.tailscale.com`). Do not
+  add Stockfish to cloud setup.
 - Use the Electron Dartsnut Agent on a desktop for interactive app verification
   and hardware mockups. Use the project Python helpers in Cloud and CI, where a
   desktop is unavailable.
