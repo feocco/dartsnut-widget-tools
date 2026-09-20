@@ -16,7 +16,7 @@ sys.path.insert(0, str(GAME))
 os.environ.pop("STOCKFISH_API_URL", None)
 
 from chess_logic.continuation import Continuation  # noqa: E402
-from engine_client import chess  # noqa: E402
+from engine_client import StaticMaterialEvaluator, chess  # noqa: E402
 from match import Match, MatchPhase  # noqa: E402
 from rendering import Renderer  # noqa: E402
 
@@ -65,7 +65,7 @@ class TerminalPlanner:
 
 def make_game():
     RUN_LOG.clear()
-    game = Match(evaluator=object(), seed_source=lambda number: 7000 + number, logger=RUN_LOG.append)
+    game = Match(evaluator=StaticMaterialEvaluator(), seed_source=lambda number: 7000 + number, logger=RUN_LOG.append)
     game.planner = CannedPlanner()
     game.verification_log = RUN_LOG
     return game
