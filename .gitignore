@@ -8,3 +8,5 @@ artifacts/
 .preview/
 dartsnut_emulator/
 *.egg-info/
+games/*/build_info.json
+widgets/*/build_info.json

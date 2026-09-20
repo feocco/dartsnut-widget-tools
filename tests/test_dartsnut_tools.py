@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from tools.dartsnut.build_info import BUILD_INFO_NAME
 from tools.dartsnut.cli import Command, execute, parse_args
 from tools.dartsnut.manifest import ManifestError, load_manifest
 from tools.dartsnut.pages import (
@@ -118,8 +119,62 @@ include = ["conf.json", "main.py", "pyproject.toml"]
         self.assertNotIn("game_state.py", game_files)
         self.assertNotIn("openings.py", game_files)
         self.assertIn("match.py", game_files)
+        self.assertIn("build_info.py", game_files)
         self.assertIn("chess_logic/continuation.py", game_files)
         self.assertIn("minigame/target_round.py", game_files)
+
+    def test_upload_stamps_declared_build_info(self):
+        requests = []
+
+        class FakeWebSocket:
+            def __init__(self, *args):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+        class FakeClient:
+            def __init__(self, websocket):
+                pass
+
+            def request(self, operation, **payload):
+                requests.append((operation, payload))
+                if operation == "read_json":
+                    config = {"pages": [new_widget_page("sample_widget_128_128", "Sample")]}
+                    content = base64.b64encode(json.dumps(config).encode("utf-8")).decode("ascii")
+                    return {"content": content}
+                if operation == "list_apps":
+                    return {"apps": [{"name": "sample_widget_128_128"}]}
+                return {}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self.make_app(Path(tmp))
+            (app / "build_info.py").write_text("info = {}\n", encoding="utf-8")
+            project = app / "pyproject.toml"
+            project.write_text(
+                project.read_text(encoding="utf-8").replace(
+                    '"pyproject.toml"]',
+                    '"pyproject.toml", "build_info.py", "build_info.json"]',
+                ),
+                encoding="utf-8",
+            )
+            command = Command("upload", "board", 9251, "/ws", 10, app, None, False)
+            with (
+                patch("tools.dartsnut.cli.SimpleWebSocket", FakeWebSocket),
+                patch("tools.dartsnut.cli.DartsnutClient", FakeClient),
+            ):
+                self.assertEqual(execute(command), 0)
+
+            stamped = json.loads((app / BUILD_INFO_NAME).read_text(encoding="utf-8"))
+            uploaded = [payload["file_name"] for operation, payload in requests if operation == "send_file"]
+
+        self.assertEqual(stamped["version"], "1.0.0")
+        self.assertEqual(stamped["app_id"], "sample_widget_128_128")
+        self.assertTrue(stamped["git_sha"])
+        self.assertIn("sample_widget_128_128/build_info.json", uploaded)
 
     def test_widget_reupload_reloads_when_config_is_unchanged(self):
         requests = []

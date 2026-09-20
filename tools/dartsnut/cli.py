@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .board import DEFAULT_PATH, DEFAULT_PORT, DartsnutClient, SimpleWebSocket
+from .build_info import app_tracks_build_info, build_payload, stamp_build_info
 from .manifest import AppManifest, load_manifest
 from .pages import remove_widget_reference, upsert_widget_page
 
@@ -110,8 +111,18 @@ def describe_plan(
     manifest: AppManifest,
     current: dict[str, object] | None,
     updated: dict[str, object] | None,
+    fingerprint: dict[str, object] | None = None,
 ) -> None:
     print(f"App: {manifest.app_id} ({manifest.kind})")
+    print(f"Version: {manifest.version}")
+    if fingerprint:
+        print(
+            "Fingerprint: "
+            f"{fingerprint.get('version', manifest.version)} "
+            f"{fingerprint.get('git_sha_short', 'unknown')} "
+            f"({fingerprint.get('git_sha', 'unknown')})"
+        )
+        print("Fingerprint file: build_info.json (stamped on upload)")
     print("Files:")
     for file in manifest.files:
         print(f"  {file.relative_path} ({file.size} bytes)")
@@ -146,7 +157,12 @@ def execute(command: Command) -> int:
             command.cleanup_widget,
             command.remove_empty_page,
         )
-        describe_plan(manifest, current, updated)
+        fingerprint = (
+            build_payload(manifest.directory, manifest.version, manifest.app_id)
+            if app_tracks_build_info(manifest.directory)
+            else None
+        )
+        describe_plan(manifest, current, updated, fingerprint)
         if command.action == "plan":
             print("Plan complete. The board was read but not changed.")
             return 0
@@ -154,6 +170,10 @@ def execute(command: Command) -> int:
             verify_installed(client, manifest.app_id)
             print(f"Verified {manifest.app_id} on {command.host}")
             return 0
+
+        if fingerprint is not None:
+            stamp_build_info(manifest.directory, manifest.version, manifest.app_id)
+            manifest = load_manifest(command.app)
 
         ensure_remote_dir(client, manifest.app_id)
         remote_dirs = sorted(

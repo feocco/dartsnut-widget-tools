@@ -1,6 +1,6 @@
 [project]
 name = "pixeldarts-chess-128-160"
-version = "1.0.1"
+version = "1.0.2"
 requires-python = ">=3.11"
 dependencies = [
   "chess==1.11.2",
@@ -15,6 +15,8 @@ package = false
 include = [
   "assets/*.png",
   "assets.py",
+  "build_info.json",
+  "build_info.py",
   "chess_logic/*.py",
   "conf.json",
   "engine_client.py",
