@@ -50,6 +50,12 @@ python3 -m tools.dartsnut upload \
   --app games/pixeldarts_chess_128_160
 ```
 
+Upload stamps `games/pixeldarts_chess_128_160/build_info.json` with the current
+git SHA. The title screen prints `{version} {short-sha} {evaluator}` so a
+photo of the board can be compared to `git rev-parse HEAD`. See
+`docs/dartsnut-websocket-upload.md`. The generated JSON is gitignored and is
+not required in a clean checkout.
+
 ## Head-to-head PixelDarts Chess
 
 - Each round generates a seeded 3x3 target grid shared by both colors.

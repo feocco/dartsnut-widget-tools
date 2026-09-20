@@ -15,7 +15,7 @@ GAME = REPO / "games" / "pixeldarts_chess_128_160"
 
 
 def compile_targets():
-    names = ["main.py", "rendering.py", "engine_client.py", "match.py"]
+    names = ["main.py", "rendering.py", "engine_client.py", "match.py", "build_info.py"]
     files = [GAME / name for name in names if (GAME / name).exists()]
     files.extend(sorted((GAME / "minigame").glob("*.py")) if (GAME / "minigame").is_dir() else [])
     files.extend(sorted((GAME / "chess_logic").glob("*.py")) if (GAME / "chess_logic").is_dir() else [])

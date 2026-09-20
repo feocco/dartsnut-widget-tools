@@ -52,6 +52,42 @@ pyproject.toml
 The directory name matches `conf.json.id`. PixelBoard widgets use `[128, 128]`.
 PixelDart games use `[128, 160]` and include a preview.
 
+## Version fingerprint
+
+`conf.json` / `[project].version` is the semver (currently `1.0.2` for
+PixelDarts Chess). That is not enough to tell whether a board is running the
+same git revision as cloud.
+
+PixelDarts Chess also ships `build_info.py` and declares `build_info.json`.
+`python3 -m tools.dartsnut upload` stamps `build_info.json` immediately before
+sending files. `plan` prints the same fingerprint but does not write the file.
+
+```json
+{
+  "version": "1.0.2",
+  "git_sha": "40-character SHA",
+  "git_sha_short": "7-character SHA, plus -dirty if the tree was dirty",
+  "dirty": false,
+  "stamped_at": "UTC timestamp",
+  "app_id": "pixeldarts_chess_128_160",
+  "source": "stamped"
+}
+```
+
+Compare board vs git:
+
+1. Title screen shows `{version} {git_sha_short} {evaluator}` (`HTTP`, `SF`,
+   or `MAT`).
+2. With debug logging enabled, boot and each continuation log
+   `fingerprint build=... sha=... evaluator=...`.
+3. On the board, read `apps/pixeldarts_chess_128_160/build_info.json`.
+4. Locally, `git rev-parse HEAD` must match `git_sha`.
+
+`MAT` means the board is on the material fallback (no `STOCKFISH_API_URL` /
+`STOCKFISH_PATH`). Cloud with the HTTP evaluator will play a different line
+than a board showing `MAT`. That is an environment mismatch, not a second
+codebase.
+
 ## Emulator
 
 Use [Dartsnut Agent](https://github.com/Dartsnut/dartsnut_emulator) on a

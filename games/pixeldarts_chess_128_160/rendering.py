@@ -45,7 +45,7 @@ class Renderer:
         draw = ImageDraw.Draw(img)
         scene = game.scene
         if scene == "title":
-            self.render_title(draw)
+            self.render_title(draw, game)
         elif scene == "turn_intro":
             self.render_intro(img, draw, game)
         elif scene in ("targets", "sudden_death"):
@@ -63,13 +63,23 @@ class Renderer:
         self.render_bottom_strip(draw, game)
         return img
 
-    def render_title(self, draw):
+    def render_title(self, draw, game=None):
         draw.rectangle((0, 0, 127, 127), fill=(8, 10, 18))
-        draw.rectangle((7, 19, 120, 108), fill=(12, 18, 28), outline=GOLD)
+        draw.rectangle((7, 19, 120, 114), fill=(12, 18, 28), outline=GOLD)
         self.center(draw, 29, "PIXELDARTS", FONT_MED, BLUE)
         self.center(draw, 50, "CHESS", FONT_BIG, WHITE)
         self.center(draw, 74, "HEAD TO HEAD", FONT_SMALL, GREEN)
         self.center(draw, 94, "PRESS A", FONT_MED, GOLD)
+        fingerprint = " ".join(
+            part
+            for part in (
+                getattr(game, "build_label", ""),
+                getattr(game, "evaluator_label", ""),
+            )
+            if part
+        )
+        if fingerprint:
+            self.center(draw, 110, fingerprint[:18], FONT_TINY, DIM)
 
     def render_intro(self, img, draw, game):
         color = BLUE if game.active_color == "white" else RED

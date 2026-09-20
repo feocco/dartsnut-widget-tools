@@ -20,7 +20,7 @@ def line_problems(start_fen: str, moves_uci: Iterable[str]) -> list[str]:
     moves = [item for item in moves_uci if item]
     colors = []
     problems = []
-    if board.is_game_over(claim_draw=True):
+    if board.is_game_over():
         if moves:
             problems.append("moves planned from a terminal position")
         return problems
@@ -41,7 +41,7 @@ def line_problems(start_fen: str, moves_uci: Iterable[str]) -> list[str]:
         board.push(move)
     if any(colors[index] == colors[index - 1] for index in range(1, len(colors))):
         problems.append(f"consecutive same-color plies {colors}")
-    terminal = board.is_game_over(claim_draw=True)
+    terminal = board.is_game_over()
     if len(set(colors)) == 1 and not terminal:
         problems.append(f"one-sided continuation colors={colors}")
     if len(moves) < 6 and not terminal:

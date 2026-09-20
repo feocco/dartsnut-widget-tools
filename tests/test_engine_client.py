@@ -10,7 +10,7 @@ from tests.fixture_support import load_analyse_fixture
 GAME_DIR = Path(__file__).resolve().parents[1] / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))
 
-from engine_client import FallbackEvaluator, HttpStockfishEvaluator, chess
+from engine_client import FallbackEvaluator, HttpStockfishEvaluator, StaticMaterialEvaluator, chess
 
 
 class FixtureHandler(BaseHTTPRequestHandler):
@@ -99,6 +99,15 @@ class EngineClientTests(unittest.TestCase):
 
         self.assertEqual(evaluator.analyse_multipv(chess.Board(), 8), ["working"])
         self.assertEqual(evaluator.last_error, "Evaluator returned no legal moves")
+        self.assertEqual(evaluator.label, "Working")
+
+    def test_material_evaluator_breaks_equal_score_reversals(self):
+        board = chess.Board()
+        board.push_uci("g1h3")
+        board.push_uci("g8h6")
+        ranked = StaticMaterialEvaluator().rank_moves(board)
+        self.assertNotEqual(ranked[0].move.uci(), "h3g1")
+        self.assertEqual(StaticMaterialEvaluator.label, "MAT")
 
 
 if __name__ == "__main__":
