@@ -44,6 +44,8 @@ def require_chess():
 
 
 class HttpStockfishEvaluator:
+    label = "HTTP"
+
     def __init__(self, base_url=None, depth=10, movetime_ms=120, timeout=1.5):
         require_chess()
         self.base_url = (base_url or os.environ.get("STOCKFISH_API_URL", "")).rstrip("/")
@@ -106,6 +108,8 @@ class HttpStockfishEvaluator:
 
 
 class StockfishEvaluator:
+    label = "SF"
+
     def __init__(self, path=None, depth=10, time_limit=0.12):
         require_chess()
         self.path = path or os.environ.get("STOCKFISH_PATH", "stockfish")
@@ -195,6 +199,7 @@ class StockfishEvaluator:
 class StaticMaterialEvaluator:
     """Fallback for emulator/dev machines without Stockfish."""
 
+    label = "MAT"
     VALUES = {
         chess.PAWN if chess else 1: 100,
         chess.KNIGHT if chess else 2: 320,
@@ -205,9 +210,19 @@ class StaticMaterialEvaluator:
     }
 
     def rank_moves(self, board):
+        own_last = board.move_stack[-2] if len(board.move_stack) >= 2 else None
+
+        def sort_key(item):
+            reversing = (
+                own_last is not None
+                and item.move.from_square == own_last.to_square
+                and item.move.to_square == own_last.from_square
+            )
+            return (item.score, 0 if reversing else 1)
+
         return sorted(
             (MoveScore(move, int(self.evaluate(board, move))) for move in board.legal_moves),
-            key=lambda item: item.score,
+            key=sort_key,
             reverse=True,
         )
 
@@ -260,11 +275,26 @@ class FallbackEvaluator:
     def __init__(self, evaluators):
         self.evaluators = evaluators
         self.last_error = ""
+        self.last_used = ""
+
+    @property
+    def label(self):
+        if self.last_used:
+            return self.last_used
+        if self.evaluators:
+            return evaluator_label(self.evaluators[0])
+        return "NONE"
+
+    def _mark(self, evaluator):
+        self.last_used = evaluator_label(evaluator)
+        return evaluator
 
     def rank_moves(self, board):
         for evaluator in self.evaluators:
             try:
-                return evaluator.rank_moves(board)
+                result = evaluator.rank_moves(board)
+                self._mark(evaluator)
+                return result
             except Exception as exc:
                 self.last_error = str(exc)
         raise RuntimeError(self.last_error or "No evaluator available")
@@ -274,8 +304,11 @@ class FallbackEvaluator:
             try:
                 analyzer = getattr(evaluator, "analyze", None)
                 if analyzer:
-                    return analyzer(board)
-                return evaluator.rank_moves(board), evaluator.evaluate_board(board)
+                    result = analyzer(board)
+                else:
+                    result = evaluator.rank_moves(board), evaluator.evaluate_board(board)
+                self._mark(evaluator)
+                return result
             except Exception as exc:
                 self.last_error = str(exc)
         raise RuntimeError(self.last_error or "No evaluator available")
@@ -288,6 +321,7 @@ class FallbackEvaluator:
                     candidates = analyser(board, multipv)
                     if not candidates:
                         raise RuntimeError("Evaluator returned no legal moves")
+                    self._mark(evaluator)
                     return candidates
             except Exception as exc:
                 self.last_error = str(exc)
@@ -312,6 +346,13 @@ def build_default_evaluator():
 
     evaluators.append(StaticMaterialEvaluator())
     return FallbackEvaluator(evaluators)
+
+
+def evaluator_label(evaluator):
+    label = getattr(evaluator, "label", None)
+    if isinstance(label, str) and label:
+        return label
+    return type(evaluator).__name__
 
 
 def cp_to_expectation(score_cp):

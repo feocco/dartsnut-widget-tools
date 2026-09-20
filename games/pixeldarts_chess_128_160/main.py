@@ -46,6 +46,12 @@ def log(message):
 dartsnut = Dartsnut()
 game = Match(logger=log)
 game.debug_overlay_enabled = DEBUG_OVERLAY
+log(
+    "boot "
+    f"build={game.build_label} "
+    f"sha={game.build_info.get('git_sha', 'unstamped')} "
+    f"evaluator={game.evaluator_label}"
+)
 renderer = Renderer()
 input_adapter = DartsnutInputAdapter(dartsnut, logger=log)
 frame_pump = FramePump(dartsnut, renderer, game, logger=log)

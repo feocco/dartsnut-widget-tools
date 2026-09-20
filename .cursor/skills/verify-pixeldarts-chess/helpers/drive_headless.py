@@ -30,7 +30,7 @@ class CannedPlanner:
         self.fixture = continuation_from_fixture("continuation_canned_three_rounds.json")
         self.requests = []
 
-    def plan(self, request):
+    def plan(self, request, board=None):
         self.requests.append(request)
         start = (request.round_number - 1) * 6
         ucis = self.fixture.moves_uci[start : start + 6]
@@ -57,7 +57,7 @@ class TerminalPlanner:
     def __init__(self):
         self.continuation = continuation_from_fixture("continuation_canned_short_terminal.json")
 
-    def plan(self, request):
+    def plan(self, request, board=None):
         if request.starting_fen != self.continuation.starting_fen:
             raise AssertionError("terminal fixture must start from the initial board")
         return self.continuation

@@ -7,8 +7,9 @@ from tests.fixture_support import continuation_from_fixture
 GAME_DIR = Path(__file__).resolve().parents[1] / "games" / "pixeldarts_chess_128_160"
 sys.path.insert(0, str(GAME_DIR))
 
+from build_info import fingerprint_label, load_build_info
 from chess_logic.continuation import Continuation
-from engine_client import chess
+from engine_client import StaticMaterialEvaluator, chess
 from frame_pump import FramePump
 from input_adapter import DartsnutInputAdapter, normalize_active_dart, normalize_hit
 from match import Match, MatchPhase
@@ -26,14 +27,14 @@ class DynamicPlanner:
     def __init__(self):
         self.requests = []
 
-    def plan(self, request):
+    def plan(self, request, board=None):
         self.requests.append(request)
-        board = chess.Board(request.starting_fen)
+        board = board.copy() if board is not None else chess.Board(request.starting_fen)
         ucis = []
         sans = []
         start = (len(self.requests) - 1) * request.max_plies
         for uci in self.LINE[start : start + request.max_plies]:
-            if board.is_game_over(claim_draw=True):
+            if board.is_game_over():
                 break
             move = chess.Move.from_uci(uci)
             ucis.append(move.uci())
@@ -223,6 +224,77 @@ class MatchTests(unittest.TestCase):
             with self.subTest(expectation=expectation):
                 game.white_expectation = expectation
                 self.assertEqual(renderer.render(game).size, (128, 160))
+
+    def test_threefold_claim_does_not_end_the_match(self):
+        game = self.make_match()
+        prior = (
+            "g1h3", "g8h6", "h3g5", "h8g8", "g5h7", "g8h8",
+            "h7f8", "h8f8", "h1g1", "f8h8", "g1h1", "h8g8",
+            "h1g1", "g8h8", "g1h1", "h8g8",
+        )
+        for uci in prior:
+            game.board.push(chess.Move.from_uci(uci))
+        closing = ("h1g1", "g8h8")
+        board = game.board.copy()
+        sans = []
+        for uci in closing:
+            move = chess.Move.from_uci(uci)
+            sans.append(board.san(move))
+            board.push(move)
+        game.continuation = Continuation(
+            starting_fen=game.board.fen(),
+            final_fen=board.fen(),
+            moves_uci=closing,
+            moves_san=tuple(sans),
+            before_wdl=0.5,
+            after_wdl=0.5,
+            loss_target_cp=0,
+        )
+        game.set_phase(MatchPhase.CONTINUATION)
+        while game.phase == MatchPhase.CONTINUATION:
+            game.tick(game.scene_started + game.PLY_SECONDS + 0.01)
+
+        self.assertTrue(game.board.can_claim_threefold_repetition())
+        self.assertFalse(game.board.is_game_over())
+        self.assertEqual(game.phase, MatchPhase.BOARD_HOLD)
+        self.assertNotEqual(game.game_over_reason, "draw")
+
+    def test_material_fallback_three_rounds_stay_on_board_hold(self):
+        game = Match(evaluator=StaticMaterialEvaluator(), seed_source=lambda number: 1000 + number)
+        now = 0
+        for _ in range(3):
+            now = self.finish_ranked_round(game, now)
+            self.assertNotEqual(game.phase, MatchPhase.GAME_OVER, game.game_over_reason)
+        self.assertEqual(game.phase, MatchPhase.CHECKMATE_UNLOCKED)
+        self.assertFalse(game.board.is_game_over())
+
+    def test_continuation_keeps_white_seat_so_pieces_do_not_jump(self):
+        game = self.make_match()
+        continuation = continuation_from_fixture("continuation_canned_six.json")
+        game.board = chess.Board(continuation.starting_fen)
+        game.continuation = continuation
+        game.set_phase(MatchPhase.CONTINUATION)
+        renderer = Renderer()
+        e2_before = renderer.square_center(chess.E2, game=game)
+
+        game.tick(game.scene_started + game.PLY_SECONDS + 0.01)
+        e4_after_white = renderer.square_center(chess.E4, game=game)
+        game.tick(game.scene_started + game.PLY_SECONDS + 0.01)
+        e4_after_black = renderer.square_center(chess.E4, game=game)
+
+        self.assertEqual(e2_before[0], e4_after_white[0])
+        self.assertEqual(e2_before[0], e4_after_black[0])
+        self.assertEqual(game.board_view_player_name, "White")
+
+    def test_title_exposes_build_and_evaluator_fingerprint(self):
+        game = self.make_match()
+        game.build_label = "1.0.2 abcdef1"
+        game.evaluator_label = "MAT"
+        frame = Renderer().render(game)
+
+        self.assertEqual(frame.size, (128, 160))
+        self.assertEqual(fingerprint_label(game.build_info).split()[0], load_build_info()["version"])
+        self.assertIn("1.0.2", game.build_label)
 
     def test_renderer_smokes_all_head_to_head_scenes(self):
         game = self.make_match()

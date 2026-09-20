@@ -57,8 +57,10 @@ class ContinuationPlanner:
     def __init__(self, analyser):
         self.analyser = analyser
 
-    def plan(self, request: ContinuationRequest) -> Continuation:
-        board = chess.Board(request.starting_fen)
+    def plan(self, request: ContinuationRequest, board: chess.Board | None = None) -> Continuation:
+        # Use the live board when provided so automatic endings see the real
+        # move stack. Optional claims (threefold / fifty-move) are not terminal.
+        working = board.copy() if board is not None else chess.Board(request.starting_fen)
         target = loss_target_for_margin(request.normalized_margin)
         moves_uci = []
         moves_san = []
@@ -67,15 +69,15 @@ class ContinuationPlanner:
         after_wdl = 0.5
 
         for ply in range(request.max_plies):
-            if board.is_game_over(claim_draw=True):
+            if working.is_game_over():
                 break
-            color = "white" if board.turn == chess.WHITE else "black"
+            color = "white" if working.turn == chess.WHITE else "black"
             winner_turn = color == request.winner_color
             multipv = 1 if request.allow_mate and winner_turn else 8
-            candidates = self.analyser.analyse_multipv(board.copy(stack=False), multipv)
-            candidates = [candidate for candidate in candidates if candidate.move in board.legal_moves]
+            candidates = self.analyser.analyse_multipv(working.copy(stack=False), multipv)
+            candidates = [candidate for candidate in candidates if candidate.move in working.legal_moves]
             if not candidates:
-                raise RuntimeError(f"Evaluator returned no legal moves for non-terminal position {board.fen()}")
+                raise RuntimeError(f"Evaluator returned no legal moves for non-terminal position {working.fen()}")
             if ply == 0:
                 before_wdl = candidates[0].white_expectation
 
@@ -93,7 +95,7 @@ class ContinuationPlanner:
                     selected_loss, selected = min(losses, key=lambda item: abs(item[0] - target))
 
             loss = max(0, best_score - selected.score_cp_stm)
-            san = board.san(selected.move)
+            san = working.san(selected.move)
             trace.append(
                 PlyTrace(
                     ply=ply + 1,
@@ -110,11 +112,11 @@ class ContinuationPlanner:
             moves_uci.append(selected.move.uci())
             moves_san.append(san)
             after_wdl = selected.white_expectation
-            board.push(selected.move)
+            working.push(selected.move)
 
         return Continuation(
             starting_fen=request.starting_fen,
-            final_fen=board.fen(),
+            final_fen=working.fen(),
             moves_uci=tuple(moves_uci),
             moves_san=tuple(moves_san),
             before_wdl=before_wdl,

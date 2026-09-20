@@ -1,7 +1,8 @@
 from enum import StrEnum
 
+from build_info import fingerprint_label, load_build_info
 from chess_logic.continuation import ContinuationPlanner, ContinuationRequest
-from engine_client import build_default_evaluator, chess, require_chess
+from engine_client import build_default_evaluator, chess, evaluator_label, require_chess
 from minigame.target_round import RoundResult, TargetRound
 
 DART_COLORS = {"white": "blue", "black": "red"}
@@ -30,6 +31,9 @@ class Match:
         self.planner = ContinuationPlanner(self.evaluator)
         self.logger = logger
         self.seed_source = seed_source or (lambda number: number * 104729)
+        self.build_info = load_build_info()
+        self.build_label = fingerprint_label(self.build_info)
+        self.evaluator_label = evaluator_label(self.evaluator)
         self.board = chess.Board()
         self.phase = MatchPhase.TITLE
         self.scene = self.phase.value
@@ -84,7 +88,7 @@ class Match:
     @property
     def board_view_player_name(self):
         if self.phase in (MatchPhase.CONTINUATION, MatchPhase.BOARD_HOLD):
-            return "White" if self.board.turn == chess.WHITE else "Black"
+            return "White"
         return self.active_player_name
 
     @property
@@ -187,17 +191,25 @@ class Match:
         )
 
     def prepare_continuation(self, now):
-        self.continuation = self.planner.plan(self.continuation_request(self.round_result))
+        request = self.continuation_request(self.round_result)
+        self.continuation = self.planner.plan(request, self.board)
         self.before_wdl = self.continuation.before_wdl
         self.after_wdl = self.continuation.after_wdl
         self.white_expectation = self.before_wdl
         self.continuation_index = 0
+        self.evaluator_label = evaluator_label(self.evaluator)
         self.log_event(
             "continuation "
             f"start_fen={self.continuation.starting_fen} "
             f"winner={self.round_result.winner} "
             f"moves={' '.join(self.continuation.moves_uci)} "
             f"colors={' '.join(item.color for item in self.continuation.ply_trace)}"
+        )
+        self.log_event(
+            "fingerprint "
+            f"build={self.build_label} "
+            f"sha={self.build_info.get('git_sha', 'unstamped')} "
+            f"evaluator={self.evaluator_label}"
         )
         if getattr(self.evaluator, "last_error", ""):
             self.log_event("evaluator_fallback")
@@ -222,7 +234,7 @@ class Match:
             self.finish_continuation(now)
 
     def finish_continuation(self, now):
-        if self.board.is_game_over(claim_draw=True):
+        if self.board.is_game_over():
             self.show_game_over(now)
         else:
             self.set_phase(MatchPhase.BOARD_HOLD, now)
@@ -250,13 +262,17 @@ class Match:
         return False
 
     def show_game_over(self, now):
-        self.game_result = self.board.result(claim_draw=True)
+        self.game_result = self.board.result()
         if self.board.is_checkmate():
             self.game_over_reason = "checkmate"
         elif self.board.is_stalemate():
             self.game_over_reason = "stalemate"
         elif self.board.is_insufficient_material():
             self.game_over_reason = "draw: material"
+        elif self.board.is_seventyfive_moves():
+            self.game_over_reason = "draw: 75-move"
+        elif self.board.is_fivefold_repetition():
+            self.game_over_reason = "draw: repetition"
         else:
             self.game_over_reason = "draw"
         self.set_phase(MatchPhase.GAME_OVER, now)

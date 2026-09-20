@@ -152,6 +152,47 @@ class ContinuationPlannerTests(unittest.TestCase):
         self.assertEqual(continuation.moves_san[-1], "Qh4#")
         self.assertTrue(chess.Board(continuation.final_fen).is_checkmate())
 
+    def test_claimable_threefold_is_not_treated_as_terminal(self):
+        prior = (
+            "g1h3", "g8h6", "h3g5", "h8g8", "g5h7", "g8h8",
+            "h7f8", "h8f8", "h1g1", "f8h8", "g1h1", "h8g8",
+            "h1g1", "g8h8", "g1h1", "h8g8",
+        )
+        live = chess.Board()
+        for uci in prior:
+            live.push(chess.Move.from_uci(uci))
+        probe = live.copy()
+        probe.push(chess.Move.from_uci("h1g1"))
+        self.assertTrue(probe.can_claim_threefold_repetition())
+        self.assertFalse(probe.is_game_over())
+
+        class Forced:
+            def analyse_multipv(self, board, multipv):
+                move = chess.Move.from_uci("h1g1" if board.turn == chess.WHITE else "g8h8")
+                return [
+                    type(
+                        "Candidate",
+                        (),
+                        {
+                            "move": move,
+                            "score_cp_stm": 0,
+                            "mate": None,
+                            "white_expectation": 0.5,
+                        },
+                    )()
+                ]
+
+        continuation = ContinuationPlanner(Forced()).plan(
+            ContinuationRequest(live.fen(), "white", 0, 3, max_plies=2),
+            live,
+        )
+        replay = live.copy()
+        for uci in continuation.moves_uci:
+            replay.push(chess.Move.from_uci(uci))
+        self.assertEqual(continuation.moves_uci, ("h1g1", "g8h8"))
+        self.assertTrue(replay.can_claim_threefold_repetition())
+        self.assertFalse(replay.is_game_over())
+
     def test_suite_does_not_need_live_stockfish(self):
         self.assertFalse(os.environ.get("STOCKFISH_API_URL"))
 

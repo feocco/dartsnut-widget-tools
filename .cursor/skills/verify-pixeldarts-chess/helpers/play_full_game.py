@@ -58,17 +58,17 @@ class ScriptedLinePlanner:
         self.moves_uci = tuple(moves_uci)
         self.played = 0
 
-    def plan(self, request):
+    def plan(self, request, board=None):
         expected = chess.Board()
         for uci in self.moves_uci[: self.played]:
             expected.push(chess.Move.from_uci(uci))
         if expected.fen() != request.starting_fen:
             raise AssertionError("scripted line drifted from the live board")
-        board = chess.Board(request.starting_fen)
+        board = board.copy() if board is not None else chess.Board(request.starting_fen)
         moves_uci: list[str] = []
         moves_san: list[str] = []
         while len(moves_uci) < request.max_plies and self.played < len(self.moves_uci):
-            if board.is_game_over(claim_draw=True):
+            if board.is_game_over():
                 break
             move = chess.Move.from_uci(self.moves_uci[self.played])
             if move not in board.legal_moves:

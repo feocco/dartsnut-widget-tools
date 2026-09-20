@@ -62,7 +62,12 @@ Six calls total. Scores are always from the side about to move.
 
 A 100cp target on three loser plies lands near a 300cp swing because each search is from the position that already ate the previous loss. That is expected, not a second multiplier you apply by hand.
 
-If the position ends early (stalemate, insufficient material, or mate when allowed), stop. Do not pad the line.
+If the position ends early (stalemate, insufficient material, automatic
+fivefold/75-move, or mate when allowed), stop. Do not pad the line. Do not
+treat a claimable threefold or fifty-move draw as terminal. Those optional
+claims are not game-over for PixelDarts Chess; the persistent match board
+keeps history that a FEN-only planner cannot see, and auto-claiming it caused
+false draws after a few rounds on the material fallback.
 
 ## Checkmate
 
