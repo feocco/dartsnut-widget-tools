@@ -8,31 +8,64 @@ cd "$ROOT"
 
 export DEBIAN_FRONTEND=noninteractive
 
+APT_PACKAGES=(
+  ca-certificates
+  curl
+  git
+  python3
+  python3-pip
+  python3-venv
+)
+
 curl_fetch() {
   curl -fsSL --connect-timeout 15 --max-time 120 --retry 3 --retry-delay 5 "$@"
 }
 
-sudo apt-get update
-sudo apt-get install -y --no-install-recommends \
-  ca-certificates \
-  curl \
-  git \
-  python3 \
-  python3-pip \
-  python3-venv
+package_installed() {
+  dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'
+}
+
+install_apt_packages() {
+  local missing=()
+  local pkg
+  for pkg in "${APT_PACKAGES[@]}"; do
+    if ! package_installed "$pkg"; then
+      missing+=("$pkg")
+    fi
+  done
+  if [ "${#missing[@]}" -eq 0 ]; then
+    echo "apt packages already installed"
+    return 0
+  fi
+  echo "installing apt packages: ${missing[*]}"
+  if ! sudo apt-get update; then
+    echo "apt-get update failed. Cloud egress must allow archive.ubuntu.com and security.ubuntu.com." >&2
+    exit 1
+  fi
+  sudo apt-get install -y --no-install-recommends "${missing[@]}"
+}
 
 install_tailscale() {
   if command -v tailscale >/dev/null && command -v tailscaled >/dev/null; then
     echo "tailscale already installed"
   else
-    . /etc/os-release
-    sudo mkdir -p --mode=0755 /usr/share/keyrings
-    curl_fetch "https://pkgs.tailscale.com/stable/ubuntu/${VERSION_CODENAME}.noarmor.gpg" \
-      | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-    curl_fetch "https://pkgs.tailscale.com/stable/ubuntu/${VERSION_CODENAME}.tailscale-keyring.list" \
-      | sudo tee /etc/apt/sources.list.d/tailscale.list >/dev/null
-    sudo apt-get update
-    sudo apt-get install -y tailscale
+    local ts_arch tmp
+    case "$(uname -m)" in
+      x86_64) ts_arch=amd64 ;;
+      aarch64 | arm64) ts_arch=arm64 ;;
+      *)
+        echo "unsupported architecture for Tailscale: $(uname -m)" >&2
+        exit 1
+        ;;
+    esac
+    tmp="$(mktemp -d)"
+    # Static tarball avoids Ubuntu apt mirrors (often blocked on Cloud egress).
+    # pkgs.tailscale.com is already covered by *.tailscale.com.
+    curl_fetch "https://pkgs.tailscale.com/stable/tailscale_latest_${ts_arch}.tgz" \
+      -o "${tmp}/tailscale.tgz"
+    tar -xzf "${tmp}/tailscale.tgz" -C "${tmp}"
+    sudo install -m 0755 "${tmp}"/tailscale_*/tailscale "${tmp}"/tailscale_*/tailscaled /usr/local/bin/
+    rm -rf "${tmp}"
   fi
   # Package install may enable systemd tailscaled. Builds must not leave it running.
   if command -v systemctl >/dev/null; then
@@ -47,6 +80,7 @@ install_node_and_pnpm() {
     node_major=0
   fi
   if [ "${node_major}" -lt 20 ]; then
+    echo "Node.js ${node_major} is below 20; installing 22.x from NodeSource requires deb.nodesource.com egress."
     curl_fetch https://deb.nodesource.com/setup_22.x | sudo -E bash -
     sudo apt-get install -y nodejs
   fi
@@ -86,6 +120,7 @@ install_emulator() {
   )
 }
 
+install_apt_packages
 install_tailscale
 install_node_and_pnpm
 install_repo_venv
