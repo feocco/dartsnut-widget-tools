@@ -15,5 +15,5 @@ opening-selection scene, is also mirrored in the pixeldarts-chess branch
 [`archive/widget-tools-43261ce`](https://github.com/feocco/pixeldarts-chess/tree/archive/widget-tools-43261ce).
 
 `.cursor/environment.json` stays only because the Cursor Cloud environment
-`dartsnut-project` still lists this repository. It delegates to
-`../dartsnut-board/.cursor/cloud/install.sh`.
+`dartsnut-project` still lists this repository. It delegates install and
+start to `../dartsnut-board/.cursor/cloud/`.

@@ -10,7 +10,7 @@ This repository is a deprecated tombstone. Ignore it.
   [feocco/dartsnut-board](https://github.com/feocco/dartsnut-board).
 - Do not open pull requests or push branches here.
 - `.cursor/environment.json` must keep delegating to
-  `../dartsnut-board/.cursor/cloud/install.sh` until this repository leaves
-  the Cursor environment.
+  `../dartsnut-board/.cursor/cloud/` until this repository leaves the Cursor
+  environment.
 - For old code, use `git log` here (last code at `daa47b4`) or the
   pixeldarts-chess branch `archive/widget-tools-43261ce`.

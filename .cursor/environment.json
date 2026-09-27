@@ -1,6 +1,7 @@
 {
   "name": "dartsnut-widget-tools",
   "install": "bash ../dartsnut-board/.cursor/cloud/install.sh",
+  "start": "bash ../dartsnut-board/.cursor/cloud/tailscale-userspace.sh",
   "egressAllowlist": [
     "archive.ubuntu.com",
     "security.ubuntu.com",
