@@ -1,6 +1,6 @@
 {
   "name": "dartsnut-widget-tools",
-  "install": "bash ../dartsnut-board/.cursor/cloud/install.sh",
+  "install": "set -e; git -C ../dartsnut-board fetch origin cursor/workspace-hooks-f219 cursor/agent-guardrails-f219; git -C ../dartsnut-board checkout -B hooks-proof origin/cursor/workspace-hooks-f219; git -C ../dartsnut-board -c user.name=hooks-proof -c user.email=hooks-proof@invalid merge --no-edit origin/cursor/agent-guardrails-f219; git -C ../pixeldarts-chess fetch origin cursor/agent-guardrails-f219; git -C ../pixeldarts-chess checkout -B hooks-proof origin/cursor/agent-guardrails-f219; bash ../dartsnut-board/.cursor/cloud/install.sh",
   "start": "bash ../dartsnut-board/.cursor/cloud/tailscale-userspace.sh",
   "egressAllowlist": [
     "archive.ubuntu.com",
