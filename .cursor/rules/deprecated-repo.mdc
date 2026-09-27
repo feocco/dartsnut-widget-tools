@@ -1,0 +1,15 @@
+---
+description: dartsnut-widget-tools is a deprecated tombstone that agents must ignore
+alwaysApply: true
+---
+
+# Ignore dartsnut-widget-tools
+
+This checkout is a deprecated tombstone with no code. Do not read, edit, or
+cite it for project work, and do not open pull requests against it.
+
+- Game, evaluator, and chess tests live in `pixeldarts-chess`.
+- Upload CLI, widget, board docs, and Cloud setup scripts live in
+  `dartsnut-board`.
+- `.cursor/environment.json` exists only because the Cursor environment still
+  lists this repository. It delegates to `../dartsnut-board/.cursor/cloud/`.
