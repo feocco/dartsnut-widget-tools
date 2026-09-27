@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Deprecated: do not edit
+
+This repository is deprecated and will be archived. Treat it as read-only
+reference.
+
+- Do not change code, tests, skills, or docs here. Do not open pull requests
+  or push branches.
+- Do not upload apps from this checkout. Its game and `tools/dartsnut` are
+  stale.
+- Make game, evaluator, and chess test changes in
+  [feocco/pixeldarts-chess](https://github.com/feocco/pixeldarts-chess).
+- Make upload CLI, widget, and board changes in
+  [feocco/dartsnut-board](https://github.com/feocco/dartsnut-board).
+- Reading history is fine, for example the opening-selection scene at
+  `43261ce`.
+- Leave `.cursor/environment.json` and `.cursor/cloud/` alone until the Cursor
+  environment stops using this repository for setup.
+
+The rest of this file describes the repository as it was before deprecation.
+
 ## Repository boundaries
 
 - Keep this repository small. It owns app source, the upload tool, fixtures,

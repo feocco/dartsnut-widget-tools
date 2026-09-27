@@ -1,5 +1,19 @@
 # Dartsnut Widget Tools
 
+> [!WARNING]
+> **Deprecated.** This repository is read-only and will be archived. Do not
+> edit it, open pull requests against it, or upload apps from it. Its game and
+> upload CLI are older than the copies in the repositories below.
+>
+> | What | Where it lives now |
+> | --- | --- |
+> | PixelDarts Chess game, Stockfish evaluator and its image, chess tests, fixtures, design docs, `verify-pixeldarts-chess` | [feocco/pixeldarts-chess](https://github.com/feocco/pixeldarts-chess) |
+> | `tools/dartsnut` upload CLI, Codex Status widget, upload docs, `verify-upload-cli`, `verify-pixelboard-widget`, Cloud Tailscale scripts | [feocco/dartsnut-board](https://github.com/feocco/dartsnut-board) |
+>
+> Both were copied from `main` at `4ad867c` without git history. The history
+> before the split stays here, for example the opening-selection scene removed
+> in `b55cc28` (last present in `43261ce`).
+
 This repository contains a PixelBoard widget, a PixelDart chess game, and one
 WebSocket upload tool. Each app directory contains the metadata and Python
 dependencies required by the current Dartsnut Agent emulator.
