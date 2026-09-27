@@ -1,5 +1,15 @@
 {
   "name": "dartsnut-widget-tools",
-  "install": "bash .cursor/cloud/install.sh",
-  "start": "bash .cursor/cloud/tailscale-userspace.sh"
+  "install": "bash ../dartsnut-board/.cursor/cloud/install.sh",
+  "egressAllowlist": [
+    "archive.ubuntu.com",
+    "security.ubuntu.com",
+    "pypi.org",
+    "files.pythonhosted.org",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+    "static.rust-lang.org",
+    "index.crates.io",
+    "static.crates.io"
+  ]
 }

@@ -1,103 +1,16 @@
 # AGENTS.md
 
-## Deprecated: do not edit
+This repository is a deprecated tombstone. Ignore it.
 
-This repository is deprecated and will be archived. Treat it as read-only
-reference.
-
-- Do not change code, tests, skills, or docs here. Do not open pull requests
-  or push branches.
-- Do not upload apps from this checkout. Its game and `tools/dartsnut` are
-  stale.
+- It has no code, tests, skills, or docs. Do not read or cite this checkout
+  for project work.
 - Make game, evaluator, and chess test changes in
   [feocco/pixeldarts-chess](https://github.com/feocco/pixeldarts-chess).
-- Make upload CLI, widget, and board changes in
+- Make upload CLI, widget, board, and Cloud setup changes in
   [feocco/dartsnut-board](https://github.com/feocco/dartsnut-board).
-- Reading history is fine, for example the opening-selection scene at
-  `43261ce`.
-- Leave `.cursor/environment.json` and `.cursor/cloud/` alone until the Cursor
-  environment stops using this repository for setup.
-
-The rest of this file describes the repository as it was before deprecation.
-
-## Repository boundaries
-
-- Keep this repository small. It owns app source, the upload tool, fixtures,
-  verification skills, and focused documentation.
-- Upload through `ws://<board-ip>:9251/ws`. Do not use SSH or edit firmware.
-- Write only under the board's `apps/` directory.
-- PixelBoard widgets use `[128, 128]`. PixelDart games use `[128, 160]`.
-- Keep each app directory name, `conf.json` id, and normalized project name
-  aligned.
-- Do not add Stockfish to cloud setup or CI.
-
-## Required checks
-
-Run all checks before committing:
-
-```bash
-python3 -m scripts.check_repo
-python3 -m unittest discover -s tests -v
-python3 -m ruff check .
-python3 -m mypy
-python3 -m py_compile scripts/*.py tools/dartsnut/*.py widgets/*/main.py games/pixeldarts_chess_128_160/*.py services/stockfish_evaluator/app.py
-```
-
-Verify the three-round renderer after PixelDarts Chess changes:
-
-```bash
-python3 .cursor/skills/verify-pixeldarts-chess/helpers/drive_headless.py \
-  --feature three-round-match \
-  --out artifacts/verify-pixeldarts-chess/three-round-match
-```
-
-Use the app manifest as the upload allowlist. Never upload hidden files,
-environment files, virtual environments, caches, bytecode, editor files,
-symlinks, undeclared files, or vendored dependencies.
-
-## Board uploads
-
-Always run the read-only plan before an upload:
-
-```bash
-python3 -m tools.dartsnut plan --host "<board-ip>" --app "<app-directory>"
-python3 -m tools.dartsnut upload --host "<board-ip>" --app "<app-directory>"
-```
-
-Preserve page UUIDs, settings, field values, sibling widgets, unknown keys, and
-unrelated pages. A real upload may mutate `apps/conf.json`.
-
-## Verification skills
-
-Every supported user-facing surface has one project-local
-`.cursor/skills/verify-*` skill. Before adding a new surface, run
-`/create-verification-skill`. For a feature on an existing surface, update its
-feature map and execute the relevant skill. Do not create one skill per small
-feature.
-
-## Cursor Cloud specific instructions
-
-- Tests do not need Stockfish. After the environment venv install, run
-  `python3 -m unittest discover -s tests -v` or the `.venv` equivalent.
-- The Dartsnut Agent desktop emulator is a pnpm Electron app at
-  `/opt/dartsnut_emulator`, not an Android emulator. Start Agent with
-  `pnpm run dev` only when a desktop is available. Cloud verification of the
-  game uses the existing Python helpers (`drive_headless.py`,
-  `record_gameplay.py`).
-- Stockfish is reached only via `STOCKFISH_API_URL`, through the userspace
-  Tailscale proxy. After start, source `.cursor/cloud/tailscale-proxy.env`.
-  Health is `GET $STOCKFISH_API_URL/health`. Analyse is
-  `POST $STOCKFISH_API_URL/analyse`. Do not hardcode the homelab address.
-- Required user-scoped Cloud Agent secrets (never team secrets):
-  `TAILSCALE_AUTH_KEY`, `STOCKFISH_API_URL`.
-- Use the Electron Dartsnut Agent on a desktop for interactive app verification
-  and hardware mockups. Use the project Python helpers in Cloud and CI, where a
-  desktop is unavailable.
-- Agent screenshots and GIFs are toolbar actions.
-- Every Cloud Agent pull request must include a real screenshot or video from
-  the run. Capture the action and resulting state, not only a final frame.
-- Use the relevant verification skill for launch, doctor, drive, evidence, and
-  cleanup steps.
-- Keep proof artifacts after cleanup and reference them in the pull request.
-- Terminal-only changes still require visual evidence of the exercised command
-  and its successful result.
+- Do not open pull requests or push branches here.
+- `.cursor/environment.json` must keep delegating to
+  `../dartsnut-board/.cursor/cloud/install.sh` until this repository leaves
+  the Cursor environment.
+- For old code, use `git log` here (last code at `daa47b4`) or the
+  pixeldarts-chess branch `archive/widget-tools-43261ce`.
